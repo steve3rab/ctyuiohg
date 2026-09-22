@@ -266,6 +266,9 @@ namespace jnifx::detail {
             return true;
         }
 
+        state.previousForegroundWindow = GetForegroundWindow();
+        state.previousActiveWindow = GetActiveWindow();
+        state.previousFocusWindow = GetFocus();
         state.disabledWindows.clear();
         EnumThreadWindows(state.ownerThreadId, &ArchiWindowsHostModalGuard::enumTopLevelWindow,
             reinterpret_cast<LPARAM>(&state));
@@ -290,6 +293,53 @@ namespace jnifx::detail {
         }
         state.disabledWindows.clear();
         state.blocked = false;
+        restoreHostActivationOnOwnerThread(state);
+    }
+
+    void ArchiWindowsHostModalGuard::restoreHostActivationOnOwnerThread(State& state) noexcept {
+        if (state.hostWindow == nullptr || !IsWindow(state.hostWindow)) {
+            state.previousForegroundWindow = nullptr;
+            state.previousActiveWindow = nullptr;
+            state.previousFocusWindow = nullptr;
+            return;
+        }
+
+        // JavaFX may have become the foreground window. Re-activate Creo on its
+        // own UI thread after re-enabling the Creo windows. The temporary input
+        // attachment makes SetForegroundWindow reliable when the JavaFX stage
+        // was created on a different GUI thread in the same process.
+        const HWND foreground = GetForegroundWindow();
+        const DWORD foregroundThread = foreground == nullptr
+            ? 0
+            : GetWindowThreadProcessId(foreground, nullptr);
+
+        bool attached = false;
+        if (foregroundThread != 0 && foregroundThread != GetCurrentThreadId()) {
+            attached = AttachThreadInput(foregroundThread, GetCurrentThreadId(), TRUE) != FALSE;
+        }
+
+        SetForegroundWindow(state.hostWindow);
+        BringWindowToTop(state.hostWindow);
+
+        const HWND activeWindow =
+            state.previousActiveWindow != nullptr && IsWindow(state.previousActiveWindow)
+                ? state.previousActiveWindow
+                : state.hostWindow;
+        SetActiveWindow(activeWindow);
+
+        const HWND focusWindow =
+            state.previousFocusWindow != nullptr && IsWindow(state.previousFocusWindow)
+                ? state.previousFocusWindow
+                : activeWindow;
+        SetFocus(focusWindow);
+
+        if (attached) {
+            AttachThreadInput(foregroundThread, GetCurrentThreadId(), FALSE);
+        }
+
+        state.previousForegroundWindow = nullptr;
+        state.previousActiveWindow = nullptr;
+        state.previousFocusWindow = nullptr;
     }
 
     LRESULT CALLBACK ArchiWindowsHostModalGuard::wndProc(
