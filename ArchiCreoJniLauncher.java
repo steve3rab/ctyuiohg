@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class ArchiCreoJniLauncher {
     private static final Object LOCK = new Object();
     private static final Map<Long, Stage> OPEN_STAGES = new HashMap<>();
+    private static final Map<Long, AtomicBoolean> CALLBACK_SENT = new HashMap<>();
     private static final AtomicBoolean INITIALIZED = new AtomicBoolean(false);
     private static final AtomicBoolean SHUTTING_DOWN = new AtomicBoolean(false);
 
@@ -114,14 +115,17 @@ public final class ArchiCreoJniLauncher {
             final Stage registeredStage = stage;
             synchronized (LOCK) {
                 OPEN_STAGES.put(requestId, registeredStage);
+                CALLBACK_SENT.put(requestId, callbackSent);
             }
 
             stage.setOnHidden(event -> {
+                final AtomicBoolean sent;
                 synchronized (LOCK) {
                     OPEN_STAGES.remove(requestId);
+                    sent = CALLBACK_SENT.remove(requestId);
                 }
                 // Native side uses requestId to release the native Creo modal block.
-                if (callbackSent.compareAndSet(false, true)) {
+                if (sent != null && sent.compareAndSet(false, true)) {
                     nativeWindowClosed(requestId);
                 }
             });
@@ -138,10 +142,12 @@ public final class ArchiCreoJniLauncher {
                     // best effort
                 }
             }
+            final AtomicBoolean sent;
             synchronized (LOCK) {
                 OPEN_STAGES.remove(requestId);
+                sent = CALLBACK_SENT.remove(requestId);
             }
-            if (callbackSent.compareAndSet(false, true)) {
+            if ((sent == null ? callbackSent : sent).compareAndSet(false, true)) {
                 nativeWindowFailed(requestId, throwableMessage(t));
             }
         }
@@ -153,10 +159,17 @@ public final class ArchiCreoJniLauncher {
      */
     public static void finishWindow(long requestId, int status, String[] values) {
         final Stage stage;
+        final AtomicBoolean sent;
         synchronized (LOCK) {
             stage = OPEN_STAGES.get(requestId);
+            sent = CALLBACK_SENT.get(requestId);
         }
-        nativeWindowResult(requestId, status, values == null ? new String[0] : values);
+
+        final AtomicBoolean callbackFlag = sent == null ? new AtomicBoolean(false) : sent;
+        if (callbackFlag.compareAndSet(false, true)) {
+            nativeWindowResult(requestId, status, values == null ? new String[0] : values);
+        }
+
         if (stage != null) {
             try {
                 stage.close();
@@ -197,6 +210,7 @@ public final class ArchiCreoJniLauncher {
 
                 synchronized (LOCK) {
                     OPEN_STAGES.clear();
+                    CALLBACK_SENT.clear();
                 }
                 Platform.exit();
             });

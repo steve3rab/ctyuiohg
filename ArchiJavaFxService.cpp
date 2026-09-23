@@ -22,10 +22,6 @@ namespace {
         return mutex;
     }
 
-    std::unique_ptr<ArchiJavaFxService>& activeInstanceStorage() {
-        static std::unique_ptr<ArchiJavaFxService> instance;
-        return instance;
-    }
 }
 
 jnifx::ArchiJavaFxRuntime::Config ArchiJavaFxService::createConfig() {
@@ -41,6 +37,11 @@ jnifx::ArchiJavaFxRuntime::Config ArchiJavaFxService::createConfig() {
     return config;
 }
 
+ArchiJavaFxService::InstancePtr& ArchiJavaFxService::activeInstanceStorage() {
+    static InstancePtr instance;
+    return instance;
+}
+
 ArchiJavaFxService::ArchiJavaFxService() : runtime_(createConfig()) {
     // Le JVM et JavaFX sont préchargés dès la création du service, donc avant le
     // premier clic utilisateur dans Creo.
@@ -49,6 +50,10 @@ ArchiJavaFxService::ArchiJavaFxService() : runtime_(createConfig()) {
 
 ArchiJavaFxService::~ArchiJavaFxService() {
     runtime_.shutdown();
+}
+
+void ArchiJavaFxService::Deleter::operator()(ArchiJavaFxService* service) const noexcept {
+    delete service;
 }
 
 bool ArchiJavaFxService::initialize() noexcept {
@@ -60,7 +65,7 @@ bool ArchiJavaFxService::initialize() noexcept {
     }
 
     try {
-        activeInstance = std::unique_ptr<ArchiJavaFxService>(new ArchiJavaFxService());
+        activeInstance.reset(new ArchiJavaFxService());
         return true;
     } catch (...) {
         activeInstance.reset();
