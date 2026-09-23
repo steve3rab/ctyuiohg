@@ -91,26 +91,41 @@ namespace jnifx {
         }
     }
 
+    ArchiJavaFxRuntime::State ArchiJavaFxRuntime::Impl::state() const noexcept {
+        std::lock_guard lock(mutex_);
+        return state_;
+    }
+
+    bool ArchiJavaFxRuntime::Impl::isReady() const noexcept {
+        std::lock_guard lock(mutex_);
+        return state_ == ArchiJavaFxRuntime::State::Ready;
+    }
+
+    std::string ArchiJavaFxRuntime::Impl::lastError() const {
+        std::lock_guard lock(mutex_);
+        return lastError_;
+    }
+
     void ArchiJavaFxRuntime::Impl::startAsync() {
         std::lock_guard lifecycleLock(lifecycleMutex_);
         std::lock_guard lock(mutex_);
 
         switch (state_) {
-        case State::Stopped:
+        case ArchiJavaFxRuntime::State::Stopped:
             break;
-        case State::Starting:
-        case State::Ready:
+        case ArchiJavaFxRuntime::State::Starting:
+        case ArchiJavaFxRuntime::State::Ready:
             return;
-        case State::Stopping:
-        case State::Terminated:
-        case State::Failed:
+        case ArchiJavaFxRuntime::State::Stopping:
+        case ArchiJavaFxRuntime::State::Terminated:
+        case ArchiJavaFxRuntime::State::Failed:
             // This runtime is single-lifecycle. The service creates a fresh
             // runtime if the plugin is initialized again. Never restart a JVM
             // from a button callback.
             return;
         }
 
-        state_ = State::Starting;
+        state_ = ArchiJavaFxRuntime::State::Starting;
         stopRequested_ = false;
         modalBusy_ = false;
         lastError_.clear();
@@ -122,14 +137,10 @@ namespace jnifx {
         } catch (...) {
             const std::exception_ptr error = std::current_exception();
             lastError_ = detail::exceptionMessage(error);
-            state_ = State::Failed;
+            state_ = ArchiJavaFxRuntime::State::Failed;
             readyCondition_.notify_all();
             throw;
         }
-    }
-
-    void ArchiJavaFxRuntime::Impl::openWindow(std::string title, Arguments arguments) {
-        dispatchWindow(std::move(title), std::move(arguments), WindowMode::Modeless);
     }
 
     bool ArchiJavaFxRuntime::Impl::tryOpenWindow(std::string title, Arguments arguments) {
@@ -138,10 +149,6 @@ namespace jnifx {
         } catch (...) {
             return false;
         }
-    }
-
-    void ArchiJavaFxRuntime::Impl::openModalWindow(std::string title, Arguments arguments) {
-        dispatchWindow(std::move(title), std::move(arguments), WindowMode::Modal);
     }
 
     bool ArchiJavaFxRuntime::Impl::tryOpenModalWindow(std::string title, Arguments arguments) {
@@ -162,7 +169,7 @@ namespace jnifx {
         // Creo ne démarre jamais la JVM : il ne fait qu'enregistrer une commande.
         std::lock_guard lock(mutex_);
 
-        if (state_ != State::Starting && state_ != State::Ready) {
+        if (state_ != ArchiJavaFxRuntime::State::Starting && state_ != ArchiJavaFxRuntime::State::Ready) {
             return 0;
         }
         if (stopRequested_) {
@@ -317,8 +324,15 @@ namespace jnifx {
         JavaFxResult result;
         result.requestId = requestId;
         result.mode = mode;
-        result.status = static_cast<JavaFxResult::Status>(status);
-        result.values = std::move(values);
+        if (status < static_cast<int>(JavaFxResult::Status::Accepted) ||
+            status > static_cast<int>(JavaFxResult::Status::Failed)) {
+            result.status = JavaFxResult::Status::Failed;
+            result.error = "Unknown JavaFX result status: " + std::to_string(status);
+            result.values.clear();
+        } else {
+            result.status = static_cast<JavaFxResult::Status>(status);
+            result.values = std::move(values);
+        }
 
         try {
             callback(std::move(result));
@@ -432,8 +446,8 @@ namespace jnifx {
             }
 
             stopRequested_ = true;
-            if (state_ == State::Ready || state_ == State::Starting) {
-                state_ = State::Stopping;
+            if (state_ == ArchiJavaFxRuntime::State::Ready || state_ == ArchiJavaFxRuntime::State::Starting) {
+                state_ = ArchiJavaFxRuntime::State::Stopping;
             }
             cancelPendingCommandsLocked(makeError("JavaFX runtime is shutting down"));
         }
@@ -596,9 +610,9 @@ namespace jnifx {
             {
                 std::lock_guard lock(mutex_);
                 if (stopRequested_) {
-                    state_ = State::Stopping;
+                    state_ = ArchiJavaFxRuntime::State::Stopping;
                 } else {
-                    state_ = State::Ready;
+                    state_ = ArchiJavaFxRuntime::State::Ready;
                 }
             }
             readyCondition_.notify_all();
@@ -639,7 +653,7 @@ namespace jnifx {
 
             {
                 std::lock_guard lock(mutex_);
-                state_ = State::Terminated;
+                state_ = ArchiJavaFxRuntime::State::Terminated;
             }
             readyCondition_.notify_all();
         } catch (...) {
@@ -652,7 +666,7 @@ namespace jnifx {
                 if (lastError_.empty()) {
                     lastError_ = detail::exceptionMessage(error);
                 }
-                state_ = State::Failed;
+                state_ = ArchiJavaFxRuntime::State::Failed;
             }
             readyCondition_.notify_all();
             commandCondition_.notify_all();

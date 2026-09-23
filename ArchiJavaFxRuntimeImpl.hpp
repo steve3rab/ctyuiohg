@@ -29,7 +29,7 @@ class ArchiJavaFxRuntime::Impl final {
     void startAsync();
     bool tryOpenWindow(std::string title, Arguments arguments);
     bool tryOpenModalWindow(std::string title, Arguments arguments);
-    State state() const noexcept;
+    ArchiJavaFxRuntime::State state() const noexcept;
     bool isReady() const noexcept;
     std::string lastError() const;
     void setResultCallback(ResultCallback callback);
@@ -76,7 +76,7 @@ class ArchiJavaFxRuntime::Impl final {
     std::condition_variable readyCondition_;
     std::condition_variable commandCondition_;
 
-    State state_ = State::Stopped;
+    ArchiJavaFxRuntime::State state_ = ArchiJavaFxRuntime::State::Stopped;
     bool stopRequested_ = false;
     bool modalBusy_ = false;
     std::string lastError_;
