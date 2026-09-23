@@ -224,19 +224,19 @@ namespace jnifx {
         }
     }
 
-    bool ArchiJavaFxRuntime::Impl::tryOpenWindow(std::string title, Arguments arguments) {
+    ArchiJavaFxRuntime::RequestId ArchiJavaFxRuntime::Impl::tryOpenWindow(std::string title, Arguments arguments) {
         try {
-            return dispatchWindow(std::move(title), std::move(arguments), WindowMode::Modeless) != 0;
+            return dispatchWindow(std::move(title), std::move(arguments), WindowMode::Modeless);
         } catch (...) {
-            return false;
+            return 0;
         }
     }
 
-    bool ArchiJavaFxRuntime::Impl::tryOpenModalWindow(std::string title, Arguments arguments) {
+    ArchiJavaFxRuntime::RequestId ArchiJavaFxRuntime::Impl::tryOpenModalWindow(std::string title, Arguments arguments) {
         try {
-            return dispatchWindow(std::move(title), std::move(arguments), WindowMode::Modal) != 0;
+            return dispatchWindow(std::move(title), std::move(arguments), WindowMode::Modal);
         } catch (...) {
-            return false;
+            return 0;
         }
     }
 

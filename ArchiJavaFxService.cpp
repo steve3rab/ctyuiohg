@@ -43,13 +43,20 @@ ArchiJavaFxService::InstancePtr& ArchiJavaFxService::activeInstanceStorage() {
 }
 
 ArchiJavaFxService::ArchiJavaFxService() : runtime_(createConfig()) {
-    // Le JVM et JavaFX sont préchargés dès la création du service, donc avant le
-    // premier clic utilisateur dans Creo.
+    // initialize() doit être appelé depuis le thread UI/callback de Creo.
+    // Ce thread devient le thread de dispatch des résultats JavaFX.
+    if (!dispatcher_.attachToCurrentThread()) {
+        throw std::runtime_error(
+            "Unable to attach JavaFX result dispatcher to the Creo thread");
+    }
+
+    // Le JVM et JavaFX sont préchargés dès la création du service.
     runtime_.preloadAsync();
 }
 
 ArchiJavaFxService::~ArchiJavaFxService() {
     runtime_.shutdown();
+    dispatcher_.shutdown();
 }
 
 void ArchiJavaFxService::Deleter::operator()(ArchiJavaFxService* service) const noexcept {
@@ -86,38 +93,54 @@ ArchiJavaFxService& ArchiJavaFxService::instance() {
     return *activeInstance;
 }
 
-bool ArchiJavaFxService::openWindow(
+ArchiJavaFxService::RequestId ArchiJavaFxService::openWindow(
     std::string title,
     std::vector<std::string> arguments) noexcept {
     try {
         return runtime_.tryOpenWindow(std::move(title), std::move(arguments));
     } catch (...) {
-        return false;
+        return 0;
     }
 }
 
-bool ArchiJavaFxService::openWindow(
+ArchiJavaFxService::RequestId ArchiJavaFxService::openWindow(
     std::string title,
     std::initializer_list<std::string> arguments) noexcept {
     return openWindow(std::move(title), std::vector<std::string>(arguments));
 }
 
-bool ArchiJavaFxService::openModalWindow(
+ArchiJavaFxService::RequestId ArchiJavaFxService::openModalWindow(
     std::string title,
     std::vector<std::string> arguments) noexcept {
     try {
         return runtime_.tryOpenModalWindow(std::move(title), std::move(arguments));
     } catch (...) {
-        return false;
+        return 0;
     }
 }
 
-bool ArchiJavaFxService::openModalWindow(
+ArchiJavaFxService::RequestId ArchiJavaFxService::openModalWindow(
     std::string title,
     std::initializer_list<std::string> arguments) noexcept {
     return openModalWindow(std::move(title), std::vector<std::string>(arguments));
 }
 
 void ArchiJavaFxService::setResultCallback(ResultCallback callback) {
-    runtime_.setResultCallback(std::move(callback));
+    runtime_.setResultCallback(
+        [this, callback = std::move(callback)](
+            jnifx::ArchiJavaFxRuntime::JavaFxResult result) mutable {
+
+            if (!callback) {
+                return;
+            }
+
+            dispatcher_.post(
+                [callback, result = std::move(result)]() mutable {
+                    try {
+                        callback(std::move(result));
+                    } catch (...) {
+                        // Ne jamais laisser une exception sortir de la WndProc.
+                    }
+                });
+        });
 }

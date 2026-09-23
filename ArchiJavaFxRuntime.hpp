@@ -66,8 +66,11 @@ namespace jnifx {
         void preloadAsync();
 
         // Les deux API sont non bloquantes côté appelant.
-        bool tryOpenWindow(std::string title, Arguments arguments = {});
-        bool tryOpenModalWindow(std::string title, Arguments arguments = {});
+        // Retourne un RequestId non nul si la demande est acceptée, 0 sinon.
+        // Le RequestId permet au code Creo d'associer la réponse JavaFX au
+        // bouton/action qui a ouvert la fenêtre.
+        RequestId tryOpenWindow(std::string title, Arguments arguments = {});
+        RequestId tryOpenModalWindow(std::string title, Arguments arguments = {});
 
         State state() const noexcept;
         bool isReady() const noexcept;

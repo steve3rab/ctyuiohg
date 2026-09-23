@@ -27,8 +27,8 @@ class ArchiJavaFxRuntime::Impl final {
     Impl& operator=(const Impl&) = delete;
 
     void startAsync();
-    bool tryOpenWindow(std::string title, Arguments arguments);
-    bool tryOpenModalWindow(std::string title, Arguments arguments);
+    RequestId tryOpenWindow(std::string title, Arguments arguments);
+    RequestId tryOpenModalWindow(std::string title, Arguments arguments);
     ArchiJavaFxRuntime::State state() const noexcept;
     bool isReady() const noexcept;
     std::string lastError() const;

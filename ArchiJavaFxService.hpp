@@ -5,10 +5,12 @@
 #include <string>
 #include <vector>
 
+#include "ArchiCreoUiDispatcher.hpp"
 #include "ArchiJavaFxRuntime.hpp"
 
 class ArchiJavaFxService final {
   public:
+    using RequestId = jnifx::ArchiJavaFxRuntime::RequestId;
     using ResultCallback = jnifx::ArchiJavaFxRuntime::ResultCallback;
     ArchiJavaFxService(const ArchiJavaFxService&) = delete;
     ArchiJavaFxService& operator=(const ArchiJavaFxService&) = delete;
@@ -44,5 +46,8 @@ class ArchiJavaFxService final {
     static InstancePtr& activeInstanceStorage();
     static jnifx::ArchiJavaFxRuntime::Config createConfig();
 
+    // Déclaré avant runtime_ : il reste vivant pendant tout le shutdown du
+    // runtime, y compris pendant les derniers callbacks JNI.
+    jnifx::detail::ArchiCreoUiDispatcher dispatcher_;
     jnifx::ArchiJavaFxRuntime runtime_;
 };
