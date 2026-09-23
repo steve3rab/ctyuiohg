@@ -21,7 +21,6 @@ namespace {
         static std::mutex mutex;
         return mutex;
     }
-
 }
 
 jnifx::ArchiJavaFxRuntime::Config ArchiJavaFxService::createConfig() {
@@ -88,9 +87,13 @@ ArchiJavaFxService& ArchiJavaFxService::instance() {
 
 bool ArchiJavaFxService::openWindow(
     std::string title,
-    std::vector<std::string> arguments) noexcept {
+    std::vector<std::string> arguments,
+    ResultCallback callback) noexcept {
     try {
-        return runtime_.tryOpenWindow(std::move(title), std::move(arguments));
+        return runtime_.tryOpenWindow(
+            std::move(title),
+            std::move(arguments),
+            std::move(callback));
     } catch (...) {
         return false;
     }
@@ -98,15 +101,23 @@ bool ArchiJavaFxService::openWindow(
 
 bool ArchiJavaFxService::openWindow(
     std::string title,
-    std::initializer_list<std::string> arguments) noexcept {
-    return openWindow(std::move(title), std::vector<std::string>(arguments));
+    std::initializer_list<std::string> arguments,
+    ResultCallback callback) noexcept {
+    return openWindow(
+        std::move(title),
+        std::vector<std::string>(arguments),
+        std::move(callback));
 }
 
 bool ArchiJavaFxService::openModalWindow(
     std::string title,
-    std::vector<std::string> arguments) noexcept {
+    std::vector<std::string> arguments,
+    ResultCallback callback) noexcept {
     try {
-        return runtime_.tryOpenModalWindow(std::move(title), std::move(arguments));
+        return runtime_.tryOpenModalWindow(
+            std::move(title),
+            std::move(arguments),
+            std::move(callback));
     } catch (...) {
         return false;
     }
@@ -114,6 +125,10 @@ bool ArchiJavaFxService::openModalWindow(
 
 bool ArchiJavaFxService::openModalWindow(
     std::string title,
-    std::initializer_list<std::string> arguments) noexcept {
-    return openModalWindow(std::move(title), std::vector<std::string>(arguments));
+    std::initializer_list<std::string> arguments,
+    ResultCallback callback) noexcept {
+    return openModalWindow(
+        std::move(title),
+        std::vector<std::string>(arguments),
+        std::move(callback));
 }

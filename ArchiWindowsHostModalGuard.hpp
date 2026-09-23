@@ -42,7 +42,6 @@ namespace jnifx::detail {
         bool block(std::chrono::milliseconds timeout);
 
         // Safe from any thread; never waits for the Creo UI thread.
-        bool unblock(std::chrono::milliseconds timeout) noexcept;
         void unblockAsync() noexcept;
 
         // Cleanup convenience for code already running on the Creo UI thread.
@@ -62,9 +61,6 @@ namespace jnifx::detail {
             DWORD ownerThreadId = 0;
             bool blocked = false;
             std::vector<DisabledWindow> disabledWindows;
-            HWND previousForegroundWindow = nullptr;
-            HWND previousActiveWindow = nullptr;
-            HWND previousFocusWindow = nullptr;
         };
 
         static constexpr UINT kBlockMessage = WM_APP + 0x513;
@@ -77,7 +73,6 @@ namespace jnifx::detail {
         static bool belongsToHostWindow(const State& state, HWND hwnd) noexcept;
         static bool applyBlockOnOwnerThread(State& state) noexcept;
         static void applyUnblockOnOwnerThread(State& state) noexcept;
-        static void restoreHostActivationOnOwnerThread(State& state) noexcept;
 
         bool createHelperWindow();
 

@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include <exception>
 
 #include "ArchiJniSupport.hpp"
 
@@ -128,32 +129,24 @@ namespace jnifx {
         }
     }
 
-    void ArchiJavaFxRuntime::Impl::openWindow(std::string title, Arguments arguments) {
-        dispatchWindow(std::move(title), std::move(arguments), WindowMode::Modeless);
-    }
-
-    bool ArchiJavaFxRuntime::Impl::tryOpenWindow(std::string title, Arguments arguments) {
+    bool ArchiJavaFxRuntime::Impl::tryOpenWindow(std::string title, Arguments arguments, ResultCallback callback) {
         try {
-            return dispatchWindow(std::move(title), std::move(arguments), WindowMode::Modeless) != 0;
+            return dispatchWindow(std::move(title), std::move(arguments), WindowMode::Modeless, std::move(callback)) != 0;
         } catch (...) {
             return false;
         }
     }
 
-    void ArchiJavaFxRuntime::Impl::openModalWindow(std::string title, Arguments arguments) {
-        dispatchWindow(std::move(title), std::move(arguments), WindowMode::Modal);
-    }
-
-    bool ArchiJavaFxRuntime::Impl::tryOpenModalWindow(std::string title, Arguments arguments) {
+    bool ArchiJavaFxRuntime::Impl::tryOpenModalWindow(std::string title, Arguments arguments, ResultCallback callback) {
         try {
-            return dispatchWindow(std::move(title), std::move(arguments), WindowMode::Modal) != 0;
+            return dispatchWindow(std::move(title), std::move(arguments), WindowMode::Modal, std::move(callback)) != 0;
         } catch (...) {
             return false;
         }
     }
 
     ArchiJavaFxRuntime::RequestId ArchiJavaFxRuntime::Impl::dispatchWindow(
-        std::string title, Arguments arguments, WindowMode mode) {
+        std::string title, Arguments arguments, WindowMode mode, ResultCallback callback) {
         if (arguments.size() > static_cast<std::size_t>(std::numeric_limits<jsize>::max() - 4)) {
             throw std::length_error("Too many arguments for JNI");
         }
@@ -214,7 +207,7 @@ namespace jnifx {
         }
 
         try {
-            requests_.emplace(requestId, RequestState{mode});
+            requests_.emplace(requestId, RequestState{mode, std::move(callback)});
             commands_.push_back(std::move(command));
         } catch (...) {
             requests_.erase(requestId);
@@ -222,7 +215,7 @@ namespace jnifx {
                 modalBusy_ = false;
             }
             if (modalBlocked) {
-                (void)hostModalGuard_.unblock(config_.modalBlockTimeout);
+                hostModalGuard_.unblockAsync();
             }
             throw;
         }
@@ -274,57 +267,35 @@ namespace jnifx {
     }
 
     void ArchiJavaFxRuntime::Impl::onWindowClosed(RequestId requestId) noexcept {
+        JavaFxResult result;
+        result.status = JavaFxResult::Status::Cancelled;
+        onWindowResult(requestId, std::move(result));
+    }
+
+    void ArchiJavaFxRuntime::Impl::onWindowResult(RequestId requestId, JavaFxResult result) noexcept {
         bool modal = false;
+        ResultCallback callback;
         {
             std::lock_guard lock(mutex_);
             const auto it = requests_.find(requestId);
-            if (it == requests_.end()) {
-                return;
-            }
+            if (it == requests_.end()) return;
             modal = it->second.mode == WindowMode::Modal;
+            callback = std::move(it->second.callback);
             requests_.erase(it);
+            if (modal) modalBusy_ = false;
         }
-
-        if (!modal) {
-            return;
-        }
-
-        // Finish the native unblock before allowing another modal request.
-        // This avoids a queued asynchronous unblock racing with the next block.
-        const bool unblocked = hostModalGuard_.unblock(config_.modalBlockTimeout);
-
-        std::lock_guard lock(mutex_);
-        modalBusy_ = false;
-        if (!unblocked) {
-            lastError_ = "Unable to unblock Creo after closing modal JavaFX window";
+        if (modal) hostModalGuard_.unblockAsync();
+        if (callback) {
+            try { callback(requestId, std::move(result)); }
+            catch (...) { /* User callback must never unwind into JNI/JavaFX. */ }
         }
     }
 
     void ArchiJavaFxRuntime::Impl::onWindowFailed(RequestId requestId, std::string message) noexcept {
-        bool modal = false;
-        const std::string errorMessage = message.empty() ? "Unknown JavaFX error" : message;
-        {
-            std::lock_guard lock(mutex_);
-            const auto it = requests_.find(requestId);
-            if (it == requests_.end()) {
-                return;
-            }
-            modal = it->second.mode == WindowMode::Modal;
-            requests_.erase(it);
-            lastError_ = errorMessage;
-        }
-
-        if (!modal) {
-            return;
-        }
-
-        const bool unblocked = hostModalGuard_.unblock(config_.modalBlockTimeout);
-
-        std::lock_guard lock(mutex_);
-        modalBusy_ = false;
-        if (!unblocked && lastError_.empty()) {
-            lastError_ = "Unable to unblock Creo after JavaFX modal failure";
-        }
+        JavaFxResult result;
+        result.status = JavaFxResult::Status::Failed;
+        result.error = message.empty() ? "Unknown JavaFX error" : std::move(message);
+        onWindowResult(requestId, std::move(result));
     }
 
     void ArchiJavaFxRuntime::Impl::failAllRequests(const std::exception_ptr& error) noexcept {
@@ -481,11 +452,13 @@ namespace jnifx {
         static JNINativeMethod methods[] = {
             { const_cast<char*>("nativeWindowClosed"), const_cast<char*>("(J)V"),
                 reinterpret_cast<void*>(&ArchiJavaFxRuntime::Impl::nativeWindowClosed) },
+            { const_cast<char*>("nativeWindowResult"), const_cast<char*>("(JLjava/lang/String;[Ljava/lang/String;)V"),
+                reinterpret_cast<void*>(&ArchiJavaFxRuntime::Impl::nativeWindowResult) },
             { const_cast<char*>("nativeWindowFailed"), const_cast<char*>("(JLjava/lang/String;)V"),
                 reinterpret_cast<void*>(&ArchiJavaFxRuntime::Impl::nativeWindowFailed) },
         };
 
-        const jint result = env->RegisterNatives(bridgeClass_, methods, 2);
+        const jint result = env->RegisterNatives(bridgeClass_, methods, 3);
         detail::throwIfJavaException(env, "registering JavaFX native callbacks");
         if (result != JNI_OK) {
             throw std::runtime_error("RegisterNatives failed");
@@ -507,6 +480,29 @@ namespace jnifx {
             return;
         }
         runtime->onWindowClosed(static_cast<RequestId>(requestId));
+    }
+
+    void JNICALL ArchiJavaFxRuntime::Impl::nativeWindowResult(JNIEnv* env, jclass, jlong requestId, jstring status, jobjectArray values) {
+        auto* runtime = static_cast<Impl*>(gActiveRuntime.load(std::memory_order_acquire));
+        if (runtime == nullptr) return;
+        JavaFxResult result;
+        const std::string statusText = javaStringToUtf8NoThrow(env, status);
+        if (statusText == "OK" || statusText == "ACCEPTED") result.status = JavaFxResult::Status::Accepted;
+        else if (statusText == "CANCEL" || statusText == "CANCELLED") result.status = JavaFxResult::Status::Cancelled;
+        else { result.status = JavaFxResult::Status::Failed; result.error = statusText.empty() ? "Unknown JavaFX result" : statusText; }
+        if (values != nullptr && result.status == JavaFxResult::Status::Accepted) {
+            const jsize count = env->GetArrayLength(values);
+            if (!env->ExceptionCheck()) {
+                result.values.reserve(static_cast<std::size_t>(count));
+                for (jsize i = 0; i < count; ++i) {
+                    auto value = static_cast<jstring>(env->GetObjectArrayElement(values, i));
+                    if (env->ExceptionCheck()) { env->ExceptionClear(); break; }
+                    result.values.push_back(javaStringToUtf8NoThrow(env, value));
+                    if (value != nullptr) env->DeleteLocalRef(value);
+                }
+            } else env->ExceptionClear();
+        }
+        runtime->onWindowResult(static_cast<RequestId>(requestId), std::move(result));
     }
 
     void JNICALL ArchiJavaFxRuntime::Impl::nativeWindowFailed(JNIEnv* env, jclass, jlong requestId, jstring message) {
