@@ -9,6 +9,7 @@
 
 class ArchiJavaFxService final {
   public:
+    using ResultCallback = jnifx::ArchiJavaFxRuntime::ResultCallback;
     ArchiJavaFxService(const ArchiJavaFxService&) = delete;
     ArchiJavaFxService& operator=(const ArchiJavaFxService&) = delete;
     ArchiJavaFxService(ArchiJavaFxService&&) = delete;
@@ -27,6 +28,8 @@ class ArchiJavaFxService final {
     // désactivées jusqu'à la fermeture de la fenêtre JavaFX.
     bool openModalWindow(std::string title, std::vector<std::string> arguments = {}) noexcept;
     bool openModalWindow(std::string title, std::initializer_list<std::string> arguments) noexcept;
+
+    void setResultCallback(ResultCallback callback);
 
   private:
     ArchiJavaFxService();
