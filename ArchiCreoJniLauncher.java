@@ -148,6 +148,25 @@ public final class ArchiCreoJniLauncher {
     }
 
     /**
+     * Completes a window with an application result. status 0 = accepted,
+     * 1 = cancelled. The native side correlates the result with requestId.
+     */
+    public static void finishWindow(long requestId, int status, String[] values) {
+        final Stage stage;
+        synchronized (LOCK) {
+            stage = OPEN_STAGES.get(requestId);
+        }
+        nativeWindowResult(requestId, status, values == null ? new String[0] : values);
+        if (stage != null) {
+            try {
+                stage.close();
+            } catch (Throwable ignored) {
+                // The result has already been delivered to native code.
+            }
+        }
+    }
+
+    /**
      * Shutdown is intentionally asynchronous from the JavaFX thread. DestroyJavaVM
      * is subsequently called by the native JVM owner thread and therefore waits for
      * the JavaFX application thread to terminate cleanly.
@@ -203,5 +222,6 @@ public final class ArchiCreoJniLauncher {
     // These methods are registered by C++ using RegisterNatives(). No JNI symbol
     // export from the Creo plugin DLL is required.
     private static native void nativeWindowClosed(long requestId);
+    private static native void nativeWindowResult(long requestId, int status, String[] values);
     private static native void nativeWindowFailed(long requestId, String message);
 }

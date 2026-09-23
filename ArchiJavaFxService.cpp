@@ -22,6 +22,10 @@ namespace {
         return mutex;
     }
 
+    std::unique_ptr<ArchiJavaFxService>& activeInstanceStorage() {
+        static std::unique_ptr<ArchiJavaFxService> instance;
+        return instance;
+    }
 }
 
 jnifx::ArchiJavaFxRuntime::Config ArchiJavaFxService::createConfig() {
@@ -47,15 +51,6 @@ ArchiJavaFxService::~ArchiJavaFxService() {
     runtime_.shutdown();
 }
 
-void ArchiJavaFxService::Deleter::operator()(ArchiJavaFxService* service) const noexcept {
-    delete service;
-}
-
-ArchiJavaFxService::InstancePtr& ArchiJavaFxService::activeInstanceStorage() {
-    static InstancePtr instance;
-    return instance;
-}
-
 bool ArchiJavaFxService::initialize() noexcept {
     std::lock_guard lock(lifecycleMutex());
     auto& activeInstance = activeInstanceStorage();
@@ -65,7 +60,7 @@ bool ArchiJavaFxService::initialize() noexcept {
     }
 
     try {
-        activeInstance.reset(new ArchiJavaFxService());
+        activeInstance = std::unique_ptr<ArchiJavaFxService>(new ArchiJavaFxService());
         return true;
     } catch (...) {
         activeInstance.reset();
@@ -116,4 +111,8 @@ bool ArchiJavaFxService::openModalWindow(
     std::string title,
     std::initializer_list<std::string> arguments) noexcept {
     return openModalWindow(std::move(title), std::vector<std::string>(arguments));
+}
+
+void ArchiJavaFxService::setResultCallback(ResultCallback callback) {
+    runtime_.setResultCallback(std::move(callback));
 }
