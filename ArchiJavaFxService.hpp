@@ -23,13 +23,13 @@ class ArchiJavaFxService final {
     static ArchiJavaFxService& instance();
 
     // Modeless : le callback Creo rend immédiatement la main et Creo reste utilisable.
-    bool openWindow(std::string title, std::vector<std::string> arguments = {}) noexcept;
-    bool openWindow(std::string title, std::initializer_list<std::string> arguments) noexcept;
+    RequestId openWindow(std::string title, std::vector<std::string> arguments = {}) noexcept;
+    RequestId openWindow(std::string title, std::initializer_list<std::string> arguments) noexcept;
 
     // Modal : le callback Creo ne reste pas bloqué, mais les fenêtres Creo sont
     // désactivées jusqu'à la fermeture de la fenêtre JavaFX.
-    bool openModalWindow(std::string title, std::vector<std::string> arguments = {}) noexcept;
-    bool openModalWindow(std::string title, std::initializer_list<std::string> arguments) noexcept;
+    RequestId openModalWindow(std::string title, std::vector<std::string> arguments = {}) noexcept;
+    RequestId openModalWindow(std::string title, std::initializer_list<std::string> arguments) noexcept;
 
     void setResultCallback(ResultCallback callback);
 

@@ -21,7 +21,6 @@ namespace {
         static std::mutex mutex;
         return mutex;
     }
-
 }
 
 jnifx::ArchiJavaFxRuntime::Config ArchiJavaFxService::createConfig() {
