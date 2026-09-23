@@ -20,24 +20,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * JNI bridge used by ArchiJavaFxRuntime.
- *
- * Result lifecycle:
- *
- *   OK      -> nativeWindowResult(requestId, 0, values)
- *   Cancel  -> nativeWindowResult(requestId, 1, emptyValues)
- *   X       -> nativeWindowResult(requestId, 1, emptyValues)
- *   Error   -> nativeWindowFailed(requestId, message)
- *
- * Only one native callback is allowed for a requestId.
- */
 public final class ArchiCreoJniLauncher {
 
-    private static final Object LOCK = new Object();
+    private static final int STATUS_ACCEPTED = 0;
+    private static final int STATUS_CANCELLED = 1;
 
-    private static final Map<Long, Stage> OPEN_STAGES = new HashMap<>();
-    private static final Map<Long, AtomicBoolean> CALLBACK_SENT = new HashMap<>();
+    private static final long STARTUP_TIMEOUT_SECONDS = 15L;
+
+    private static final Map<Long, WindowRequest> REQUESTS =
+        new ConcurrentHashMap<>();
 
     private static final AtomicBoolean INITIALIZED =
         new AtomicBoolean(false);
@@ -45,14 +36,17 @@ public final class ArchiCreoJniLauncher {
     private static final AtomicBoolean SHUTTING_DOWN =
         new AtomicBoolean(false);
 
+    private record WindowRequest(
+        long requestId,
+        Stage stage,
+        AtomicBoolean completed) {
+    }
+
     private ArchiCreoJniLauncher() {
     }
 
-    /**
-     * Called once by the native JVM owner thread.
-     */
+    /** Called by the native JVM owner thread. */
     public static void initialize() throws Exception {
-
         if (INITIALIZED.get()) {
             return;
         }
@@ -64,56 +58,30 @@ public final class ArchiCreoJniLauncher {
             new AtomicReference<>();
 
         try {
-
-            Platform.startup(() -> {
-                try {
-                    // Do not create a Stage here.
-                }
-                catch (Throwable t) {
-                    startupError.set(t);
-                }
-                finally {
-                    ready.countDown();
-                }
-            });
-
-        }
-        catch (IllegalStateException alreadyStarted) {
-
-            // JavaFX was already started by another component.
+            Platform.startup(() -> ready.countDown());
+        } catch (IllegalStateException alreadyStarted) {
             try {
                 Platform.runLater(ready::countDown);
-            }
-            catch (Throwable t) {
-                startupError.set(t);
+            } catch (Throwable error) {
+                startupError.set(error);
                 ready.countDown();
             }
         }
 
-        if (!ready.await(15, TimeUnit.SECONDS)) {
-            throw new IllegalStateException(
-                "JavaFX startup timeout");
+        if (!ready.await(STARTUP_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+            throw new IllegalStateException("JavaFX startup timeout");
         }
 
         final Throwable error = startupError.get();
-
         if (error != null) {
-            throw new IllegalStateException(
-                "JavaFX startup failed",
-                error);
+            throw new IllegalStateException("JavaFX startup failed", error);
         }
 
         Platform.setImplicitExit(false);
-
         INITIALIZED.set(true);
     }
 
-    /**
-     * Opens a modeless or modal window asynchronously.
-     *
-     * mode 0 = Modality.NONE
-     * mode 1 = Modality.APPLICATION_MODAL
-     */
+    /** Opens a modeless (0) or application-modal (1) window. */
     public static void openWindow(
         String title,
         String[] args,
@@ -121,40 +89,27 @@ public final class ArchiCreoJniLauncher {
         long requestId) {
 
         if (!INITIALIZED.get()) {
-            nativeWindowFailed(
-                requestId,
-                "JavaFX runtime is not initialized");
+            nativeWindowFailed(requestId, "JavaFX is not initialized");
             return;
         }
 
         if (SHUTTING_DOWN.get()) {
-            nativeWindowFailed(
-                requestId,
-                "JavaFX runtime is shutting down");
+            nativeWindowFailed(requestId, "JavaFX is shutting down");
             return;
         }
 
+        final String safeTitle = title == null ? "" : title;
+        final String[] safeArgs = args == null ? new String[0] : args.clone();
+
         try {
-
-            Platform.runLater(() ->
-                createAndShowWindow(
-                    title,
-                    args,
-                    mode,
-                    requestId));
-
-        }
-        catch (Throwable t) {
-
-            nativeWindowFailed(
-                requestId,
-                throwableMessage(t));
+            Platform.runLater(() -> createAndShowWindow(
+                safeTitle, safeArgs, mode, requestId));
+        } catch (Throwable error) {
+            nativeWindowFailed(requestId, throwableMessage(error));
         }
     }
 
-    /**
-     * Must execute on the JavaFX Application Thread.
-     */
+    /** Runs only on the JavaFX Application Thread. */
     private static void createAndShowWindow(
         String title,
         String[] args,
@@ -162,448 +117,201 @@ public final class ArchiCreoJniLauncher {
         long requestId) {
 
         if (SHUTTING_DOWN.get()) {
-            nativeWindowFailed(
-                requestId,
-                "JavaFX runtime is shutting down");
+            nativeWindowFailed(requestId, "JavaFX is shutting down");
             return;
         }
 
-        Stage stage = null;
-
-        final AtomicBoolean callbackSent =
-            new AtomicBoolean(false);
+        final Stage stage = new Stage();
+        final WindowRequest request = new WindowRequest(
+            requestId,
+            stage,
+            new AtomicBoolean(false));
 
         try {
-
-            stage = new Stage();
-
-            final boolean modal = mode == 1;
-
+            stage.setTitle(title);
             stage.initModality(
-                modal
-                    ? Modality.APPLICATION_MODAL
-                    : Modality.NONE);
+                mode == 1 ? Modality.APPLICATION_MODAL : Modality.NONE);
+            stage.setScene(new Scene(
+                createContent(title, args, requestId),
+                900,
+                650));
 
-            stage.setTitle(
-                title == null ? "" : title);
-
-            final Scene scene =
-                new Scene(
-                    createContent(
-                        title,
-                        args,
-                        requestId),
-                    900,
-                    650);
-
-            stage.setScene(scene);
-
-            final Stage registeredStage = stage;
-
-            synchronized (LOCK) {
-                OPEN_STAGES.put(
-                    requestId,
-                    registeredStage);
-
-                CALLBACK_SENT.put(
-                    requestId,
-                    callbackSent);
-            }
-
-            /*
-             * Closing with the X is considered Cancelled.
-             *
-             * This is important because the C++ side must receive
-             * a terminal result even when the user closes the window
-             * without pressing OK or Cancel.
-             */
-            stage.setOnHidden(event -> {
-
-                final AtomicBoolean sent;
-
-                synchronized (LOCK) {
-
-                    OPEN_STAGES.remove(requestId);
-
-                    sent = CALLBACK_SENT.remove(
-                        requestId);
-                }
-
-                if (sent != null &&
-                    sent.compareAndSet(false, true)) {
-
-                    nativeWindowResult(
-                        requestId,
-                        1,              // Cancelled
-                        new String[0]);
-                }
-            });
-
-            /*
-             * IMPORTANT:
-             *
-             * Use show(), not showAndWait().
-             *
-             * The JavaFX Application Thread remains in control
-             * of its normal event loop.
-             */
-            stage.show();
-            stage.toFront();
-
-        }
-        catch (Throwable t) {
-
-            if (stage != null) {
-
-                try {
-                    stage.close();
-                }
-                catch (Throwable ignored) {
-                    // Best effort.
-                }
-            }
-
-            final AtomicBoolean sent;
-
-            synchronized (LOCK) {
-
-                OPEN_STAGES.remove(requestId);
-
-                sent = CALLBACK_SENT.remove(
-                    requestId);
-            }
-
-            final AtomicBoolean callbackFlag =
-                sent == null
-                    ? callbackSent
-                    : sent;
-
-            if (callbackFlag.compareAndSet(
-                    false,
-                    true)) {
-
+            if (REQUESTS.putIfAbsent(requestId, request) != null) {
                 nativeWindowFailed(
                     requestId,
-                    throwableMessage(t));
+                    "Duplicate requestId: " + requestId);
+                return;
+            }
+
+            stage.setOnHidden(event -> cancelIfNeeded(request));
+
+            stage.show();
+            stage.toFront();
+        } catch (Throwable error) {
+            REQUESTS.remove(requestId, request);
+            if (request.completed().compareAndSet(false, true)) {
+                nativeWindowFailed(requestId, throwableMessage(error));
             }
         }
     }
 
-    /**
-     * Completes the JavaFX window.
-     *
-     * status:
-     *
-     *   0 = Accepted
-     *   1 = Cancelled
-     *   2 = Failed
-     */
+    /** Completes a request. Safe to call from any Java thread. */
     public static void finishWindow(
         long requestId,
         int status,
         String[] values) {
 
         final String[] safeValues =
-            values == null
-                ? new String[0]
-                : values.clone();
+            values == null ? new String[0] : values.clone();
 
-        /*
-         * finishWindow() may be called from any Java thread.
-         *
-         * Stage manipulation and the actual result delivery are
-         * serialized on the JavaFX Application Thread.
-         */
-        if (!Platform.isFxApplicationThread()) {
+        final Runnable completion = () -> {
+            final WindowRequest request = REQUESTS.get(requestId);
+            if (request == null) {
+                return;
+            }
+
+            if (!request.completed().compareAndSet(false, true)) {
+                return;
+            }
+
+            REQUESTS.remove(requestId, request);
 
             try {
-
-                Platform.runLater(() ->
-                    finishWindow(
-                        requestId,
-                        status,
-                        safeValues));
-
+                nativeWindowResult(requestId, status, safeValues);
+            } finally {
+                try {
+                    request.stage().close();
+                } catch (Throwable ignored) {
+                    // The native result has already been delivered.
+                }
             }
-            catch (Throwable t) {
+        };
 
-                nativeWindowFailed(
-                    requestId,
-                    throwableMessage(t));
-            }
-
-            return;
-        }
-
-        final Stage stage;
-        final AtomicBoolean callbackFlag;
-
-        synchronized (LOCK) {
-
-            stage = OPEN_STAGES.get(requestId);
-
-            callbackFlag =
-                CALLBACK_SENT.get(requestId);
-        }
-
-        /*
-         * The request may already have been closed.
-         */
-        if (callbackFlag == null) {
-            return;
-        }
-
-        /*
-         * Exactly one terminal callback is allowed.
-         */
-        if (!callbackFlag.compareAndSet(
-                false,
-                true)) {
-
-            return;
-        }
-
-        /*
-         * Deliver the result BEFORE closing the Stage.
-         *
-         * This guarantees that the native side receives the
-         * values before onHidden() is triggered.
-         */
-        try {
-
-            nativeWindowResult(
-                requestId,
-                status,
-                safeValues);
-
-        }
-        catch (Throwable t) {
-
-            /*
-             * There is normally nothing useful we can do here,
-             * because the native callback itself failed.
-             */
-        }
-
-        /*
-         * Remove the stage from the active list here.
-         *
-         * onHidden() will also execute, but callbackSent is already
-         * true, therefore no second native result is generated.
-         */
-        synchronized (LOCK) {
-
-            OPEN_STAGES.remove(requestId);
-            CALLBACK_SENT.remove(requestId);
-        }
-
-        if (stage != null) {
-
+        if (Platform.isFxApplicationThread()) {
+            completion.run();
+        } else {
             try {
-                stage.close();
-            }
-            catch (Throwable ignored) {
-                // Result was already delivered.
+                Platform.runLater(completion);
+            } catch (Throwable error) {
+                REQUESTS.computeIfPresent(requestId, (id, request) -> {
+                    if (request.completed().compareAndSet(false, true)) {
+                        nativeWindowFailed(id, throwableMessage(error));
+                        return null;
+                    }
+                    return request;
+                });
             }
         }
     }
 
-    /**
-     * Convenience method for Cancel.
-     */
     public static void cancelWindow(long requestId) {
+        finishWindow(requestId, STATUS_CANCELLED, new String[0]);
+    }
 
-        finishWindow(
-            requestId,
-            1,
+    /** Runs only on the JavaFX Application Thread. */
+    private static void cancelIfNeeded(WindowRequest request) {
+        if (!request.completed().compareAndSet(false, true)) {
+            return;
+        }
+
+        REQUESTS.remove(request.requestId(), request);
+
+        nativeWindowResult(
+            request.requestId(),
+            STATUS_CANCELLED,
             new String[0]);
     }
 
     /**
-     * Example JavaFX content.
-     *
-     * Replace the fields/buttons with the real application UI.
-     *
-     * The important point is that the OK action calls finishWindow().
+     * Example UI. Replace createContent() with the real application UI.
+     * The example returns the edited text through finishWindow().
      */
     private static BorderPane createContent(
         String title,
         String[] args,
         long requestId) {
 
-        final BorderPane root =
-            new BorderPane();
+        final BorderPane root = new BorderPane();
+        root.setPadding(new Insets(20));
 
-        root.setPadding(
-            new Insets(20));
+        final Label label = new Label(
+            title.isBlank() ? "JavaFX dialog" : title);
 
-        final Label titleLabel =
-            new Label(
-                title == null
-                    ? "JavaFX window"
-                    : title);
-
-        final TextField valueField =
-            new TextField();
-
-        /*
-         * Example:
-         *
-         * C++:
-         *
-         * openModalWindow(
-         *     "My dialog",
-         *     {"PART_001", "123.45"});
-         *
-         * Java receives:
-         *
-         * args[0] = PART_001
-         * args[1] = 123.45
-         */
-
-        if (args != null &&
-            args.length > 0) {
-
-            valueField.setText(
-                args[0]);
+        final TextField valueField = new TextField();
+        if (args.length > 0) {
+            valueField.setText(args[0]);
         }
 
-        final Button okButton =
-            new Button("OK");
+        final Button ok = new Button("OK");
+        final Button cancel = new Button("Cancel");
 
-        final Button cancelButton =
-            new Button("Cancel");
+        ok.setOnAction(event -> finishWindow(
+            requestId,
+            STATUS_ACCEPTED,
+            new String[]{valueField.getText()}));
 
-        /*
-         * OK
-         *
-         * Return the data to C++.
-         */
-        okButton.setOnAction(event -> {
+        cancel.setOnAction(event -> cancelWindow(requestId));
 
-            final String value =
-                valueField.getText();
-
-            finishWindow(
-                requestId,
-                0,              // Accepted
-                new String[] {
-                    value
-                });
-        });
-
-        /*
-         * Cancel
-         */
-        cancelButton.setOnAction(event -> {
-
-            finishWindow(
-                requestId,
-                1,              // Cancelled
-                new String[0]);
-        });
-
-        final HBox buttons =
-            new HBox(
-                10,
-                okButton,
-                cancelButton);
-
-        final VBox content =
-            new VBox(
-                12,
-                titleLabel,
-                valueField,
-                buttons);
+        final HBox buttons = new HBox(10, ok, cancel);
+        final VBox content = new VBox(12, label, valueField, buttons);
 
         root.setCenter(content);
-
         return root;
     }
 
-    /**
-     * Shutdown.
-     *
-     * The JavaFX Application Thread performs the Stage cleanup
-     * and then exits JavaFX.
-     */
+    /** Idempotent JavaFX shutdown. */
     public static void shutdown() {
-
         if (!INITIALIZED.get()) {
             return;
         }
 
-        if (!SHUTTING_DOWN.compareAndSet(
-                false,
-                true)) {
-
+        if (!SHUTTING_DOWN.compareAndSet(false, true)) {
             return;
         }
 
+        final Runnable shutdown = () -> {
+            final ArrayList<WindowRequest> requests =
+                new ArrayList<>(REQUESTS.values());
+
+            for (WindowRequest request : requests) {
+                if (request.completed().compareAndSet(false, true)) {
+                    nativeWindowResult(
+                        request.requestId(),
+                        STATUS_CANCELLED,
+                        new String[0]);
+                }
+
+                try {
+                    request.stage().close();
+                } catch (Throwable ignored) {
+                    // Continue shutdown.
+                }
+            }
+
+            REQUESTS.clear();
+            INITIALIZED.set(false);
+            Platform.exit();
+        };
+
         try {
-
-            Platform.runLater(() -> {
-
-                final ArrayList<Stage> stages;
-
-                synchronized (LOCK) {
-
-                    stages =
-                        new ArrayList<>(
-                            OPEN_STAGES.values());
-                }
-
-                for (Stage stage : stages) {
-
-                    try {
-                        stage.close();
-                    }
-                    catch (Throwable ignored) {
-                        // Continue shutting down.
-                    }
-                }
-
-                synchronized (LOCK) {
-
-                    OPEN_STAGES.clear();
-                    CALLBACK_SENT.clear();
-                }
-
-                INITIALIZED.set(false);
-
-                Platform.exit();
-            });
-
-        }
-        catch (Throwable ignored) {
-
-            /*
-             * Native DestroyJavaVM() remains responsible for
-             * completing the JVM lifecycle.
-             */
+            if (Platform.isFxApplicationThread()) {
+                shutdown.run();
+            } else {
+                Platform.runLater(shutdown);
+            }
+        } catch (Throwable ignored) {
+            REQUESTS.clear();
+            INITIALIZED.set(false);
         }
     }
 
-    private static String throwableMessage(
-        Throwable t) {
-
-        final String message =
-            t.getMessage();
-
-        return t.getClass().getName()
-            + (
-                message == null ||
-                message.isEmpty()
-                    ? ""
-                    : ": " + message
-              );
+    private static String throwableMessage(Throwable error) {
+        final String message = error.getMessage();
+        return error.getClass().getName()
+            + (message == null || message.isBlank() ? "" : ": " + message);
     }
 
-    /*
-     * Registered from C++ with RegisterNatives().
-     */
-    private static native void nativeWindowClosed(
-        long requestId);
+    private static native void nativeWindowClosed(long requestId);
 
     private static native void nativeWindowResult(
         long requestId,
