@@ -158,6 +158,20 @@ public final class ArchiCreoJniLauncher {
      * 1 = cancelled. The native side correlates the result with requestId.
      */
     public static void finishWindow(long requestId, int status, String[] values) {
+        final String[] safeValues = values == null ? new String[0] : values.clone();
+
+        // Stage operations must stay on the JavaFX Application Thread. This also
+        // guarantees that the JNI result callback follows one deterministic thread
+        // when finishWindow() is called by application code from another thread.
+        if (!Platform.isFxApplicationThread()) {
+            try {
+                Platform.runLater(() -> finishWindow(requestId, status, safeValues));
+            } catch (Throwable t) {
+                nativeWindowFailed(requestId, throwableMessage(t));
+            }
+            return;
+        }
+
         final Stage stage;
         final AtomicBoolean sent;
         synchronized (LOCK) {
@@ -167,7 +181,7 @@ public final class ArchiCreoJniLauncher {
 
         final AtomicBoolean callbackFlag = sent == null ? new AtomicBoolean(false) : sent;
         if (callbackFlag.compareAndSet(false, true)) {
-            nativeWindowResult(requestId, status, values == null ? new String[0] : values);
+            nativeWindowResult(requestId, status, safeValues);
         }
 
         if (stage != null) {

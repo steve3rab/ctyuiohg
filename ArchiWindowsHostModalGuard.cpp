@@ -48,7 +48,15 @@ namespace jnifx::detail {
             return false;
         }
 
-        HWND candidate = GetActiveWindow();
+        HWND candidate = nullptr;
+        GUITHREADINFO guiInfo{};
+        guiInfo.cbSize = sizeof(guiInfo);
+        if (GetGUIThreadInfo(GetCurrentThreadId(), &guiInfo) != FALSE) {
+            candidate = guiInfo.hwndActive != nullptr ? guiInfo.hwndActive : guiInfo.hwndFocus;
+        }
+        if (candidate == nullptr) {
+            candidate = GetActiveWindow();
+        }
         if (candidate == nullptr) {
             candidate = GetFocus();
         }

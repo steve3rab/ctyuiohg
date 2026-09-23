@@ -26,18 +26,62 @@ namespace jnifx {
             }
 
             try {
-                const char* chars = env->GetStringUTFChars(value, nullptr);
-                if (chars == nullptr) {
-                    if (env->ExceptionCheck()) {
-                        env->ExceptionClear();
-                    }
-                    return {};
-                }
-                std::string result(chars);
-                env->ReleaseStringUTFChars(value, chars);
+                const jsize length = env->GetStringLength(value);
                 if (env->ExceptionCheck()) {
                     env->ExceptionClear();
+                    return {};
                 }
+
+                std::vector<jchar> chars(static_cast<std::size_t>(length));
+                if (length != 0) {
+                    env->GetStringRegion(value, 0, length, chars.data());
+                    if (env->ExceptionCheck()) {
+                        env->ExceptionClear();
+                        return {};
+                    }
+                }
+
+                std::string result;
+                result.reserve(static_cast<std::size_t>(length));
+
+                for (std::size_t i = 0; i < chars.size(); ++i) {
+                    std::uint32_t codePoint = chars[i];
+
+                    if (codePoint >= 0xD800 && codePoint <= 0xDBFF) {
+                        if (i + 1 < chars.size()) {
+                            const std::uint32_t low = chars[i + 1];
+                            if (low >= 0xDC00 && low <= 0xDFFF) {
+                                codePoint = 0x10000u
+                                    + ((codePoint - 0xD800u) << 10u)
+                                    + (low - 0xDC00u);
+                                ++i;
+                            } else {
+                                codePoint = 0xFFFDu;
+                            }
+                        } else {
+                            codePoint = 0xFFFDu;
+                        }
+                    } else if (codePoint >= 0xDC00 && codePoint <= 0xDFFF) {
+                        codePoint = 0xFFFDu;
+                    }
+
+                    if (codePoint <= 0x7Fu) {
+                        result.push_back(static_cast<char>(codePoint));
+                    } else if (codePoint <= 0x7FFu) {
+                        result.push_back(static_cast<char>(0xC0u | (codePoint >> 6u)));
+                        result.push_back(static_cast<char>(0x80u | (codePoint & 0x3Fu)));
+                    } else if (codePoint <= 0xFFFFu) {
+                        result.push_back(static_cast<char>(0xE0u | (codePoint >> 12u)));
+                        result.push_back(static_cast<char>(0x80u | ((codePoint >> 6u) & 0x3Fu)));
+                        result.push_back(static_cast<char>(0x80u | (codePoint & 0x3Fu)));
+                    } else {
+                        result.push_back(static_cast<char>(0xF0u | (codePoint >> 18u)));
+                        result.push_back(static_cast<char>(0x80u | ((codePoint >> 12u) & 0x3Fu)));
+                        result.push_back(static_cast<char>(0x80u | ((codePoint >> 6u) & 0x3Fu)));
+                        result.push_back(static_cast<char>(0x80u | (codePoint & 0x3Fu)));
+                    }
+                }
+
                 return result;
             } catch (...) {
                 if (env->ExceptionCheck()) {
@@ -45,6 +89,43 @@ namespace jnifx {
                 }
                 return {};
             }
+        }
+
+        std::vector<std::string> javaStringArrayToUtf8NoThrow(
+            JNIEnv* env, jobjectArray values) noexcept {
+            std::vector<std::string> result;
+            if (env == nullptr || values == nullptr) {
+                return result;
+            }
+
+            try {
+                const jsize length = env->GetArrayLength(values);
+                if (env->ExceptionCheck()) {
+                    env->ExceptionClear();
+                    return {};
+                }
+
+                result.reserve(static_cast<std::size_t>(length));
+                for (jsize i = 0; i < length; ++i) {
+                    jstring value = static_cast<jstring>(env->GetObjectArrayElement(values, i));
+                    if (env->ExceptionCheck()) {
+                        env->ExceptionClear();
+                        return {};
+                    }
+
+                    result.emplace_back(javaStringToUtf8NoThrow(env, value));
+                    if (value != nullptr) {
+                        env->DeleteLocalRef(value);
+                    }
+                }
+            } catch (...) {
+                if (env->ExceptionCheck()) {
+                    env->ExceptionClear();
+                }
+                return {};
+            }
+
+            return result;
         }
 
     }    // namespace
