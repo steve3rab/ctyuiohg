@@ -145,6 +145,8 @@ public final class ArchiCreoJniLauncher {
 
             // show(), not showAndWait(): the JavaFX Application Thread remains the
             // normal event-processing thread, including for modal stages.
+            stage.setWidth(320.0);
+            stage.setHeight(160.0);
             stage.show();
             stage.toFront();
             final Stage shownStage = stage;
