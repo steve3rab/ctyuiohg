@@ -51,7 +51,7 @@ final class ArchiJavaFxViews {
         return root;
     }
 
-    static BorderPane content(String title) {
+    static BorderPane content(String title, String[] args) {
         final BorderPane root = new BorderPane();
         root.setPadding(new Insets(16));
         root.setCenter(new Label(title == null ? "JavaFX window" : title));
