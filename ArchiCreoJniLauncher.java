@@ -1,13 +1,8 @@
 package com.thales.hwb.Archi.launcher;
 
 import javafx.application.Platform;
-import javafx.geometry.Insets;
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.control.ProgressIndicator;
-import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
@@ -113,7 +108,7 @@ public final class ArchiCreoJniLauncher {
             stage.setTitle(title == null ? "" : title);
 
             // Existing application-specific UI should be constructed here.
-            final StackPane root = new StackPane(createLoadingView());
+            final StackPane root = new StackPane(ArchiJavaFxViews.loading());
             final Scene scene = new Scene(root, 900, 650);
             stage.setScene(scene);
 
@@ -156,7 +151,7 @@ public final class ArchiCreoJniLauncher {
                 try {
                     root.getChildren().setAll(createContent(title, args));
                 } catch (Throwable t) {
-                    root.getChildren().setAll(createErrorView(throwableMessage(t)));
+                    root.getChildren().setAll(ArchiJavaFxViews.error(throwableMessage(t)));
                 }
             });
         } catch (Throwable t) {
@@ -298,21 +293,21 @@ public final class ArchiCreoJniLauncher {
     }
 
     private static BorderPane createLoadingView() {
-        final BorderPane root = new BorderPane();
         final ProgressIndicator indicator = new ProgressIndicator();
         final Label label = new Label("Loading...");
         final VBox box = new VBox(12, indicator, label);
         box.setAlignment(javafx.geometry.Pos.CENTER);
+        final BorderPane root = new BorderPane();
         root.setCenter(box);
         return root;
     }
 
     private static BorderPane createProcessingView(String message) {
-        final BorderPane root = new BorderPane();
         final ProgressIndicator indicator = new ProgressIndicator();
         final Label label = new Label(message);
         final VBox box = new VBox(12, indicator, label);
         box.setAlignment(javafx.geometry.Pos.CENTER);
+        final BorderPane root = new BorderPane();
         root.setCenter(box);
         return root;
     }
@@ -324,19 +319,11 @@ public final class ArchiCreoJniLauncher {
     }
 
     private static void showProcessingState(Stage stage, String message) {
-        stage.getScene().setRoot(createProcessingView(message));
+        stage.getScene().setRoot(ArchiJavaFxViews.processing(message));
     }
 
     private static void showErrorState(Stage stage, String message) {
-        stage.getScene().setRoot(createErrorView(message));
-    }
-
-    private static BorderPane createContent(String title, String[] args) {
-        final BorderPane root = new BorderPane();
-        root.setPadding(new Insets(16));
-        root.setCenter(new Label(title == null ? "JavaFX window" : title));
-        // Replace this method with the existing application-specific UI factory.
-        return root;
+        stage.getScene().setRoot(ArchiJavaFxViews.error(message));
     }
 
     private static String throwableMessage(Throwable t) {
