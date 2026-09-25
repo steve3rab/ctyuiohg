@@ -284,6 +284,7 @@ namespace jnifx {
         }
 
         WindowCommand command;
+        command.kind = WindowCommand::Kind::OpenWindow;
         command.requestId = requestId;
         command.mode = mode;
         command.title = std::move(title);
@@ -319,7 +320,45 @@ namespace jnifx {
         return requestId;
     }
 
+    void ArchiJavaFxRuntime::Impl::completeProcessing(RequestId requestId, bool success, std::string message) {
+        std::lock_guard lock(mutex_);
+        const auto it = requests_.find(requestId);
+        if (it == requests_.end() || !it->second.processing || stopRequested_) {
+            return;
+        }
+        WindowCommand command;
+        command.kind = WindowCommand::Kind::CompleteProcessing;
+        command.requestId = requestId;
+        command.mode = it->second.mode;
+        command.processingSuccess = success;
+        command.processingMessage = std::move(message);
+        commands_.push_back(std::move(command));
+        commandCondition_.notify_one();
+    }
+
+    void ArchiJavaFxRuntime::Impl::executeProcessingCompletion(JNIEnv* env, WindowCommand command) {
+        try {
+            jstring message = detail::newJavaString(env, command.processingMessage);
+            if (completeProcessingMethod_ == nullptr) {
+                throw std::runtime_error("JavaFxBridge.completeProcessing is missing");
+            }
+            env->CallStaticVoidMethod(
+                bridgeClass_, completeProcessingMethod_,
+                static_cast<jlong>(command.requestId),
+                command.processingSuccess ? JNI_TRUE : JNI_FALSE,
+                message);
+            detail::throwIfJavaException(env, "completing JavaFX processing");
+        } catch (...) {
+            std::lock_guard lock(mutex_);
+            lastError_ = detail::exceptionMessage(std::current_exception());
+        }
+    }
+
     void ArchiJavaFxRuntime::Impl::executeWindow(JNIEnv* env, WindowCommand command) {
+        if (command.kind == WindowCommand::Kind::CompleteProcessing) {
+            executeProcessingCompletion(env, std::move(command));
+            return;
+        }
         try {
             detail::LocalFrame localFrame(env, 16);
 
@@ -370,6 +409,7 @@ namespace jnifx {
         WindowMode mode = WindowMode::Modeless;
         ResultCallback callback;
         bool modal = false;
+        const bool accepted = status == static_cast<int>(JavaFxResult::Status::Accepted);
 
         {
             std::lock_guard lock(mutex_);
@@ -379,9 +419,13 @@ namespace jnifx {
             }
             mode = it->second.mode;
             modal = mode == WindowMode::Modal;
-            requests_.erase(it);
-            if (modal) {
-                modalBusy_ = false;
+            if (accepted) {
+                it->second.processing = true;
+            } else {
+                requests_.erase(it);
+                if (modal) {
+                    modalBusy_ = false;
+                }
             }
             try {
                 callback = resultCallback_;
@@ -390,7 +434,7 @@ namespace jnifx {
             }
         }
 
-        if (modal) {
+        if (!accepted && modal) {
             const bool unblocked = hostModalGuard_.unblock(config_.modalBlockTimeout);
             if (!unblocked) {
                 std::lock_guard lock(mutex_);
@@ -418,9 +462,38 @@ namespace jnifx {
         try {
             callback(std::move(result));
         } catch (...) {
-            // A user callback must never break the JVM/JavaFX worker thread.
             std::lock_guard lock(mutex_);
             lastError_ = detail::exceptionMessage(std::current_exception());
+        }
+    }
+
+    void ArchiJavaFxRuntime::Impl::onWindowProcessingFinished(
+        RequestId requestId, bool success) noexcept {
+        WindowMode mode = WindowMode::Modeless;
+        bool modal = false;
+        {
+            std::lock_guard lock(mutex_);
+            const auto it = requests_.find(requestId);
+            if (it == requests_.end()) {
+                return;
+            }
+            mode = it->second.mode;
+            modal = mode == WindowMode::Modal;
+            if (!success) {
+                it->second.processing = false;
+                return;
+            }
+            requests_.erase(it);
+            if (modal) {
+                modalBusy_ = false;
+            }
+        }
+        if (modal) {
+            const bool unblocked = hostModalGuard_.unblock(config_.modalBlockTimeout);
+            if (!unblocked) {
+                std::lock_guard lock(mutex_);
+                lastError_ = "Unable to unblock Creo after JavaFX processing completed";
+            }
         }
     }
 
@@ -635,9 +708,11 @@ namespace jnifx {
                 reinterpret_cast<void*>(&ArchiJavaFxRuntime::Impl::nativeWindowResult) },
             { const_cast<char*>("nativeWindowFailed"), const_cast<char*>("(JLjava/lang/String;)V"),
                 reinterpret_cast<void*>(&ArchiJavaFxRuntime::Impl::nativeWindowFailed) },
+            { const_cast<char*>("nativeProcessingFinished"), const_cast<char*>("(JZ)V"),
+                reinterpret_cast<void*>(&ArchiJavaFxRuntime::Impl::nativeProcessingFinished) },
         };
 
-        const jint result = env->RegisterNatives(bridgeClass_, methods, 3);
+        const jint result = env->RegisterNatives(bridgeClass_, methods, 4);
         detail::throwIfJavaException(env, "registering JavaFX native callbacks");
         if (result != JNI_OK) {
             throw std::runtime_error("RegisterNatives failed");
@@ -669,6 +744,14 @@ namespace jnifx {
         }
         runtime->onWindowResult(
             static_cast<RequestId>(requestId), static_cast<int>(status), javaStringArrayToUtf8NoThrow(env, values));
+    }
+
+    void JNICALL ArchiJavaFxRuntime::Impl::nativeProcessingFinished(JNIEnv*, jclass, jlong requestId, jboolean success) {
+        auto* runtime = static_cast<Impl*>(gActiveRuntime.load(std::memory_order_acquire));
+        if (runtime == nullptr) {
+            return;
+        }
+        runtime->onWindowProcessingFinished(static_cast<RequestId>(requestId), success == JNI_TRUE);
     }
 
     void JNICALL ArchiJavaFxRuntime::Impl::nativeWindowFailed(JNIEnv* env, jclass, jlong requestId, jstring message) {
@@ -838,10 +921,12 @@ namespace jnifx {
         initializeMethod_ = env->GetStaticMethodID(bridgeClass_, "initialize", "()V");
         openWindowMethod_ = env->GetStaticMethodID(
             bridgeClass_, "openWindow", "(Ljava/lang/String;[Ljava/lang/String;IJ)V");
+        completeProcessingMethod_ = env->GetStaticMethodID(
+            bridgeClass_, "completeProcessing", "(JZLjava/lang/String;)V");
         shutdownMethod_ = env->GetStaticMethodID(bridgeClass_, "shutdown", "()V");
         detail::throwIfJavaException(env, "resolving JavaFxBridge methods");
 
-        if (initializeMethod_ == nullptr || openWindowMethod_ == nullptr || shutdownMethod_ == nullptr) {
+        if (initializeMethod_ == nullptr || openWindowMethod_ == nullptr || completeProcessingMethod_ == nullptr || shutdownMethod_ == nullptr) {
             throw std::runtime_error("JavaFxBridge method missing");
         }
 
@@ -888,6 +973,7 @@ namespace jnifx {
 
         initializeMethod_ = nullptr;
         openWindowMethod_ = nullptr;
+        completeProcessingMethod_ = nullptr;
         shutdownMethod_ = nullptr;
     }
 
