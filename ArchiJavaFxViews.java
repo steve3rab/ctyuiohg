@@ -3,6 +3,7 @@ package com.thales.hwb.Archi.launcher;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -61,15 +62,29 @@ final class ArchiJavaFxViews {
         final Label label = new Label(
             title == null || title.isBlank() ? "JavaFX window" : title);
 
+        final Label modelNameLabel = new Label("Model name");
+        final TextField modelNameField = new TextField();
+        modelNameField.setPromptText("Enter model name");
+        modelNameField.setPrefColumnCount(24);
+
         final Button cancel = new Button("Cancel");
         final Button ok = new Button("OK");
 
         final HBox buttons = new HBox(8, cancel, ok);
         buttons.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
 
-        final VBox content = new VBox(12, label, buttons);
+        final VBox content = new VBox(
+            12,
+            label,
+            modelNameLabel,
+            modelNameField,
+            buttons);
+
         content.setAlignment(javafx.geometry.Pos.CENTER);
 
+        // The launcher reads the TextField value through the callbacks installed
+        // by the request-specific JavaFX controller. The view itself only owns
+        // the controls and their layout.
         root.setCenter(content);
         return root;
     }
