@@ -153,7 +153,7 @@ public final class ArchiCreoJniLauncher {
             Platform.runLater(() -> {
                 if (SHUTTING_DOWN.get()) return;
                 try {
-                    root.getChildren().setAll(ArchiJavaFxViews.content(title, args));
+                    root.getChildren().setAll(ArchiJavaFxViews.content(shownStage, requestId, title, args));
                     ArchiJavaFxViews.fitStageToContent(shownStage);
                 } catch (Throwable t) {
                     root.getChildren().setAll(ArchiJavaFxViews.error(throwableMessage(t)));
@@ -176,6 +176,20 @@ public final class ArchiCreoJniLauncher {
                 nativeWindowFailed(requestId, throwableMessage(t));
             }
         }
+    }
+
+    /** Accepts the current form values and keeps the window open while native processing runs. */
+    public static void acceptWindow(long requestId, String modelName) {
+        final String safeName = modelName == null ? "" : modelName.trim();
+        if (safeName.isEmpty()) {
+            return;
+        }
+        finishWindow(requestId, 0, new String[] { safeName });
+    }
+
+    /** Cancels the current request and closes its JavaFX window. */
+    public static void cancelWindow(long requestId) {
+        finishWindow(requestId, 1, new String[0]);
     }
 
     /**
@@ -295,32 +309,6 @@ public final class ArchiCreoJniLauncher {
             // Let DestroyJavaVM finish the remaining JVM lifecycle. Native side
             // still clears its modal host guard after the worker exits.
         }
-    }
-
-    private static BorderPane createLoadingView() {
-        final ProgressIndicator indicator = new ProgressIndicator();
-        final Label label = new Label("Loading...");
-        final VBox box = new VBox(12, indicator, label);
-        box.setAlignment(javafx.geometry.Pos.CENTER);
-        final BorderPane root = new BorderPane();
-        root.setCenter(box);
-        return root;
-    }
-
-    private static BorderPane createProcessingView(String message) {
-        final ProgressIndicator indicator = new ProgressIndicator();
-        final Label label = new Label(message);
-        final VBox box = new VBox(12, indicator, label);
-        box.setAlignment(javafx.geometry.Pos.CENTER);
-        final BorderPane root = new BorderPane();
-        root.setCenter(box);
-        return root;
-    }
-
-    private static BorderPane createErrorView(String message) {
-        final BorderPane root = new BorderPane();
-        root.setCenter(new Label(message));
-        return root;
     }
 
     private static void showProcessingState(Stage stage, String message) {
