@@ -33,24 +33,32 @@ class ArchiJavaFxRuntime::Impl final {
     bool isReady() const noexcept;
     std::string lastError() const;
     void setResultCallback(ResultCallback callback);
+    void completeProcessing(RequestId requestId, bool success, std::string message);
     void shutdown() noexcept;
 
   private:
     struct WindowCommand final {
+        enum class Kind : std::uint8_t { OpenWindow, CompleteProcessing };
+        Kind kind = Kind::OpenWindow;
         RequestId requestId = 0;
         WindowMode mode = WindowMode::Modeless;
         std::string title;
         Arguments arguments;
+        bool processingSuccess = false;
+        std::string processingMessage;
     };
 
     struct RequestState final {
         WindowMode mode = WindowMode::Modeless;
+        bool processing = false;
     };
 
     RequestId dispatchWindow(std::string title, Arguments arguments, WindowMode mode);
     void executeWindow(JNIEnv* env, WindowCommand command);
+    void executeProcessingCompletion(JNIEnv* env, WindowCommand command);
     void onWindowClosed(RequestId requestId) noexcept;
     void onWindowResult(RequestId requestId, int status, std::vector<std::string> values) noexcept;
+    void onWindowProcessingFinished(RequestId requestId, bool success) noexcept;
     void onWindowFailed(RequestId requestId, std::string message) noexcept;
     void failAllRequests(const std::exception_ptr& error) noexcept;
     void cancelPendingCommandsLocked(const std::exception_ptr& error) noexcept;
@@ -68,6 +76,7 @@ class ArchiJavaFxRuntime::Impl final {
     static void JNICALL nativeWindowResult(
         JNIEnv* env, jclass clazz, jlong requestId, jint status, jobjectArray values);
     static void JNICALL nativeWindowFailed(JNIEnv* env, jclass clazz, jlong requestId, jstring message);
+    static void JNICALL nativeProcessingFinished(JNIEnv* env, jclass clazz, jlong requestId, jboolean success);
 
     Config config_;
 
@@ -94,6 +103,7 @@ class ArchiJavaFxRuntime::Impl final {
     jobject embeddedClassLoader_ = nullptr;
     jmethodID initializeMethod_ = nullptr;
     jmethodID openWindowMethod_ = nullptr;
+    jmethodID completeProcessingMethod_ = nullptr;
     jmethodID shutdownMethod_ = nullptr;
 
     detail::ArchiWindowsJvmLoader jvmLoader_;

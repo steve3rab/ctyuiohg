@@ -1,10 +1,8 @@
 package com.thales.hwb.Archi.launcher;
 
 import javafx.application.Platform;
-import javafx.geometry.Insets;
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.StackPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
@@ -26,6 +24,7 @@ public final class ArchiCreoJniLauncher {
     private static final Object LOCK = new Object();
     private static final Map<Long, Stage> OPEN_STAGES = new HashMap<>();
     private static final Map<Long, AtomicBoolean> CALLBACK_SENT = new HashMap<>();
+    private static final Map<Long, AtomicBoolean> PROCESSING = new HashMap<>();
     private static final AtomicBoolean INITIALIZED = new AtomicBoolean(false);
     private static final AtomicBoolean SHUTTING_DOWN = new AtomicBoolean(false);
 
@@ -109,19 +108,33 @@ public final class ArchiCreoJniLauncher {
             stage.setTitle(title == null ? "" : title);
 
             // Existing application-specific UI should be constructed here.
-            final Scene scene = new Scene(createContent(title, args), 900, 650);
+            final StackPane root = new StackPane(ArchiJavaFxViews.loading());
+            final Scene scene = new Scene(root, 900, 650);
             stage.setScene(scene);
+            ArchiJavaFxViews.applyMinimumSize(stage);
 
             final Stage registeredStage = stage;
             synchronized (LOCK) {
                 OPEN_STAGES.put(requestId, registeredStage);
                 CALLBACK_SENT.put(requestId, callbackSent);
+                PROCESSING.put(requestId, new AtomicBoolean(false));
             }
+
+            stage.setOnCloseRequest(event -> {
+                final AtomicBoolean processing;
+                synchronized (LOCK) {
+                    processing = PROCESSING.get(requestId);
+                }
+                if (processing != null && processing.get()) {
+                    event.consume();
+                }
+            });
 
             stage.setOnHidden(event -> {
                 final AtomicBoolean sent;
                 synchronized (LOCK) {
                     OPEN_STAGES.remove(requestId);
+                    PROCESSING.remove(requestId);
                     sent = CALLBACK_SENT.remove(requestId);
                 }
                 // Native side uses requestId to release the native Creo modal block.
@@ -132,8 +145,20 @@ public final class ArchiCreoJniLauncher {
 
             // show(), not showAndWait(): the JavaFX Application Thread remains the
             // normal event-processing thread, including for modal stages.
+            stage.setWidth(320.0);
+            stage.setHeight(160.0);
             stage.show();
             stage.toFront();
+            final Stage shownStage = stage;
+            Platform.runLater(() -> {
+                if (SHUTTING_DOWN.get()) return;
+                try {
+                    root.getChildren().setAll(ArchiJavaFxViews.content(shownStage, requestId, title, args));
+                    ArchiJavaFxViews.fitStageToContent(shownStage);
+                } catch (Throwable t) {
+                    root.getChildren().setAll(ArchiJavaFxViews.error(throwableMessage(t)));
+                }
+            });
         } catch (Throwable t) {
             if (stage != null) {
                 try {
@@ -153,16 +178,26 @@ public final class ArchiCreoJniLauncher {
         }
     }
 
+    /** Accepts the current form values and keeps the window open while native processing runs. */
+    public static void acceptWindow(long requestId, String modelName) {
+        final String safeName = modelName == null ? "" : modelName.trim();
+        if (safeName.isEmpty()) {
+            return;
+        }
+        finishWindow(requestId, 0, new String[] { safeName });
+    }
+
+    /** Cancels the current request and closes its JavaFX window. */
+    public static void cancelWindow(long requestId) {
+        finishWindow(requestId, 1, new String[0]);
+    }
+
     /**
      * Completes a window with an application result. status 0 = accepted,
      * 1 = cancelled. The native side correlates the result with requestId.
      */
     public static void finishWindow(long requestId, int status, String[] values) {
         final String[] safeValues = values == null ? new String[0] : values.clone();
-
-        // Stage operations must stay on the JavaFX Application Thread. This also
-        // guarantees that the JNI result callback follows one deterministic thread
-        // when finishWindow() is called by application code from another thread.
         if (!Platform.isFxApplicationThread()) {
             try {
                 Platform.runLater(() -> finishWindow(requestId, status, safeValues));
@@ -174,23 +209,64 @@ public final class ArchiCreoJniLauncher {
 
         final Stage stage;
         final AtomicBoolean sent;
+        final AtomicBoolean processing;
         synchronized (LOCK) {
             stage = OPEN_STAGES.get(requestId);
             sent = CALLBACK_SENT.get(requestId);
+            processing = PROCESSING.get(requestId);
+        }
+        if (stage == null || sent == null || processing == null) {
+            nativeWindowFailed(requestId, "JavaFX request is no longer active");
+            return;
         }
 
-        final AtomicBoolean callbackFlag = sent == null ? new AtomicBoolean(false) : sent;
-        if (callbackFlag.compareAndSet(false, true)) {
+        if (status == 0) {
+            processing.set(true);
+            showProcessingState(stage, "Processing...");
+            if (sent.compareAndSet(false, true)) {
+                nativeWindowResult(requestId, status, safeValues);
+            }
+            return;
+        }
+
+        if (sent.compareAndSet(false, true)) {
             nativeWindowResult(requestId, status, safeValues);
         }
+        stage.close();
+    }
 
-        if (stage != null) {
+    public static void completeProcessing(long requestId, boolean success, String message) {
+        if (!Platform.isFxApplicationThread()) {
             try {
-                stage.close();
-            } catch (Throwable ignored) {
-                // The result has already been delivered to native code.
+                Platform.runLater(() -> completeProcessing(requestId, success, message));
+            } catch (Throwable t) {
+                nativeWindowFailed(requestId, throwableMessage(t));
             }
+            return;
         }
+
+        final Stage stage;
+        final AtomicBoolean sent;
+        final AtomicBoolean processing;
+        synchronized (LOCK) {
+            stage = OPEN_STAGES.get(requestId);
+            sent = CALLBACK_SENT.get(requestId);
+            processing = PROCESSING.get(requestId);
+        }
+        if (stage == null || sent == null || processing == null) return;
+
+        if (success) {
+            processing.set(false);
+            stage.close();
+            nativeProcessingFinished(requestId, true);
+            return;
+        }
+
+        processing.set(false);
+        sent.set(false);
+        showErrorState(stage, message == null || message.isEmpty()
+            ? "Processing failed. Please check the input and try again."
+            : message);
     }
 
     /**
@@ -225,6 +301,7 @@ public final class ArchiCreoJniLauncher {
                 synchronized (LOCK) {
                     OPEN_STAGES.clear();
                     CALLBACK_SENT.clear();
+                    PROCESSING.clear();
                 }
                 Platform.exit();
             });
@@ -234,12 +311,12 @@ public final class ArchiCreoJniLauncher {
         }
     }
 
-    private static BorderPane createContent(String title, String[] args) {
-        final BorderPane root = new BorderPane();
-        root.setPadding(new Insets(16));
-        root.setCenter(new Label(title == null ? "JavaFX window" : title));
-        // Replace this method with the existing application-specific UI factory.
-        return root;
+    private static void showProcessingState(Stage stage, String message) {
+        stage.getScene().setRoot(ArchiJavaFxViews.processing(message));
+    }
+
+    private static void showErrorState(Stage stage, String message) {
+        stage.getScene().setRoot(ArchiJavaFxViews.error(message));
     }
 
     private static String throwableMessage(Throwable t) {
@@ -252,4 +329,5 @@ public final class ArchiCreoJniLauncher {
     private static native void nativeWindowClosed(long requestId);
     private static native void nativeWindowResult(long requestId, int status, String[] values);
     private static native void nativeWindowFailed(long requestId, String message);
+    private static native void nativeProcessingFinished(long requestId, boolean success);
 }
