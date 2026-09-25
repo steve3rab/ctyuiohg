@@ -32,6 +32,7 @@ class ArchiJavaFxService final {
     RequestId openModalWindow(std::string title, std::initializer_list<std::string> arguments) noexcept;
 
     void setResultCallback(ResultCallback callback);
+    void completeProcessing(RequestId requestId, bool success, std::string message = {});
 
   private:
     ArchiJavaFxService();
