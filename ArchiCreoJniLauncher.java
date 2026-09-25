@@ -147,11 +147,12 @@ public final class ArchiCreoJniLauncher {
             // normal event-processing thread, including for modal stages.
             stage.show();
             stage.toFront();
+            final Stage shownStage = stage;
             Platform.runLater(() -> {
                 if (SHUTTING_DOWN.get()) return;
                 try {
                     root.getChildren().setAll(ArchiJavaFxViews.content(title, args));
-                    ArchiJavaFxViews.fitStageToContent(stage);
+                    ArchiJavaFxViews.fitStageToContent(shownStage);
                 } catch (Throwable t) {
                     root.getChildren().setAll(ArchiJavaFxViews.error(throwableMessage(t)));
                 }
