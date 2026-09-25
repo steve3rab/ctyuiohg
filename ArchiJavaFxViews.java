@@ -55,7 +55,7 @@ final class ArchiJavaFxViews {
         return root;
     }
 
-    static BorderPane content(String title, String[] args) {
+    static BorderPane content(Stage stage, long requestId, String title, String[] args) {
         final BorderPane root = new BorderPane();
         root.setPadding(new Insets(16));
 
@@ -70,6 +70,19 @@ final class ArchiJavaFxViews {
         final Button cancel = new Button("Cancel");
         final Button ok = new Button("OK");
 
+        cancel.setOnAction(event ->
+            ArchiCreoJniLauncher.cancelWindow(requestId));
+
+        ok.setOnAction(event -> {
+            final String modelName = modelNameField.getText().trim();
+            if (modelName.isEmpty()) {
+                modelNameField.requestFocus();
+                modelNameField.selectAll();
+                return;
+            }
+            ArchiCreoJniLauncher.acceptWindow(requestId, modelName);
+        });
+
         final HBox buttons = new HBox(8, cancel, ok);
         buttons.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
 
@@ -82,9 +95,6 @@ final class ArchiJavaFxViews {
 
         content.setAlignment(javafx.geometry.Pos.CENTER);
 
-        // The launcher reads the TextField value through the callbacks installed
-        // by the request-specific JavaFX controller. The view itself only owns
-        // the controls and their layout.
         root.setCenter(content);
         return root;
     }
