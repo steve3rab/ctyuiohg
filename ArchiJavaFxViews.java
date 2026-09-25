@@ -5,6 +5,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 
 /**
  * Small JavaFX view factory shared by the JNI launcher.
@@ -56,5 +57,20 @@ final class ArchiJavaFxViews {
         root.setPadding(new Insets(16));
         root.setCenter(new Label(title == null ? "JavaFX window" : title));
         return root;
+    }
+
+    static void fitStageToContent(Stage stage) {
+        stage.sizeToScene();
+        final double width = Math.max(stage.getWidth(), 420.0);
+        final double height = Math.max(stage.getHeight(), 220.0);
+        stage.setMinWidth(420.0);
+        stage.setMinHeight(220.0);
+        stage.setWidth(width);
+        stage.setHeight(height);
+    }
+
+    static void applyMinimumSize(Stage stage) {
+        stage.setMinWidth(420.0);
+        stage.setMinHeight(220.0);
     }
 }
