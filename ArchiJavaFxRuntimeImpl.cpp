@@ -784,7 +784,7 @@ namespace jnifx {
             readyCondition_.notify_all();
 
             JNIEnv* env = nullptr;
-            if (vm_->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_8) != JNI_OK || env == nullptr) {
+            if (vm_->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_10) != JNI_OK || env == nullptr) {
                 throw std::runtime_error("JVM owner thread lost its JNIEnv");
             }
 
@@ -847,7 +847,7 @@ namespace jnifx {
         }
 
         JavaVMInitArgs arguments{};
-        arguments.version = JNI_VERSION_1_8;
+        arguments.version = JNI_VERSION_10;
         arguments.ignoreUnrecognized = JNI_FALSE;
 
         std::vector<std::string> optionStrings;
@@ -986,7 +986,7 @@ namespace jnifx {
 
         JavaVM* vm = vm_;
         JNIEnv* env = nullptr;
-        if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_8) == JNI_OK && env != nullptr) {
+        if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_10) == JNI_OK && env != nullptr) {
             if (bridgeClass_ != nullptr && shutdownMethod_ != nullptr) {
                 env->CallStaticVoidMethod(bridgeClass_, shutdownMethod_);
                 if (env->ExceptionCheck()) {
