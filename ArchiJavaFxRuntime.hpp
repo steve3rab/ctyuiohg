@@ -78,9 +78,9 @@ namespace jnifx {
         bool isReady() const noexcept;
         std::string lastError() const;
 
-        // Le callback est exécuté sur le thread Java qui appelle le callback JNI
-        // (normalement le JavaFX Application Thread lorsque finishWindow() est
-        // appelé depuis l'UI JavaFX). Il ne doit pas appeler directement Creo TOOLKIT.
+        // Le callback interne est appelé depuis le thread qui reçoit le callback JNI
+        // (normalement le thread JavaFX). Les intégrations qui doivent exécuter
+        // Creo TOOLKIT doivent le rediriger vers le thread UI/dispatch de Creo.
         void setResultCallback(ResultCallback callback);
 
         // Arrêt complet : au retour, la JVM et JavaFX sont arrêtés et jvm.dll peut
