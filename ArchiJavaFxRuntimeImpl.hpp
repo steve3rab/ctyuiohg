@@ -33,6 +33,7 @@ class ArchiJavaFxRuntime::Impl final {
     bool isReady() const noexcept;
     std::string lastError() const;
     void setResultCallback(ResultCallback callback);
+    void completeProcessing(RequestId requestId, bool success, std::string message);
     void shutdown() noexcept;
 
   private:
@@ -55,7 +56,6 @@ class ArchiJavaFxRuntime::Impl final {
     RequestId dispatchWindow(std::string title, Arguments arguments, WindowMode mode);
     void executeWindow(JNIEnv* env, WindowCommand command);
     void executeProcessingCompletion(JNIEnv* env, WindowCommand command);
-    void completeProcessing(RequestId requestId, bool success, std::string message);
     void onWindowClosed(RequestId requestId) noexcept;
     void onWindowResult(RequestId requestId, int status, std::vector<std::string> values) noexcept;
     void onWindowProcessingFinished(RequestId requestId, bool success) noexcept;
