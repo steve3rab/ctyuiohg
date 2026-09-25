@@ -149,7 +149,7 @@ public final class ArchiCreoJniLauncher {
             Platform.runLater(() -> {
                 if (SHUTTING_DOWN.get()) return;
                 try {
-                    root.getChildren().setAll(createContent(title, args));
+                    root.getChildren().setAll(ArchiJavaFxViews.content(title, args));
                 } catch (Throwable t) {
                     root.getChildren().setAll(ArchiJavaFxViews.error(throwableMessage(t)));
                 }
