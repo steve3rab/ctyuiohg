@@ -3,6 +3,9 @@
 #include "ArchiJavaFxService.hpp"
 
 #include <unordered_map>
+#include <string>
+#include <exception>
+#include <utility>
 
 namespace {
 
@@ -36,15 +39,29 @@ void configureJavaFxResultCallback()
                 return;
             }
 
-            switch (action) {
-            case JavaFxAction::CreatePart:
-                createPartFromJavaFx(result);
-                break;
-
-            case JavaFxAction::CreateAssembly:
-                createAssemblyFromJavaFx(result);
-                break;
+            bool success = false;
+            std::string error;
+            try {
+                switch (action) {
+                case JavaFxAction::CreatePart:
+                    createPartFromJavaFx(result);
+                    success = true;
+                    break;
+                case JavaFxAction::CreateAssembly:
+                    createAssemblyFromJavaFx(result);
+                    success = true;
+                    break;
+                }
+            } catch (const std::exception& exception) {
+                error = exception.what();
+            } catch (...) {
+                error = "Unknown Creo processing error";
             }
+
+            ArchiJavaFxService::instance().completeProcessing(
+                result.requestId,
+                success,
+                std::move(error));
         });
 }
 
