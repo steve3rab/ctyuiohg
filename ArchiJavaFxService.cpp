@@ -124,6 +124,10 @@ ArchiJavaFxService::RequestId ArchiJavaFxService::openModalWindow(
     return openModalWindow(std::move(title), std::vector<std::string>(arguments));
 }
 
+void ArchiJavaFxService::completeProcessing(RequestId requestId, bool success, std::string message) {
+    runtime_.completeProcessing(requestId, success, std::move(message));
+}
+
 void ArchiJavaFxService::setResultCallback(ResultCallback callback) {
     runtime_.setResultCallback(
         [this, callback = std::move(callback)](
