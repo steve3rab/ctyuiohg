@@ -349,8 +349,10 @@ namespace jnifx {
                 message);
             detail::throwIfJavaException(env, "completing JavaFX processing");
         } catch (...) {
-            std::lock_guard lock(mutex_);
-            lastError_ = detail::exceptionMessage(std::current_exception());
+            const std::string error = detail::exceptionMessage(std::current_exception());
+            onWindowFailed(
+                command.requestId,
+                error.empty() ? "Unable to update JavaFX processing state" : error);
         }
     }
 
