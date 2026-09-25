@@ -267,6 +267,8 @@ public final class ArchiCreoJniLauncher {
         showErrorState(stage, message == null || message.isEmpty()
             ? "Processing failed. Please check the input and try again."
             : message);
+        // Keep native request state synchronized with the JavaFX retry state.
+        nativeProcessingFinished(requestId, false);
     }
 
     /**
