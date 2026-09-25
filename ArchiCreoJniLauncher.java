@@ -111,6 +111,7 @@ public final class ArchiCreoJniLauncher {
             final StackPane root = new StackPane(ArchiJavaFxViews.loading());
             final Scene scene = new Scene(root, 900, 650);
             stage.setScene(scene);
+            ArchiJavaFxViews.applyMinimumSize(stage);
 
             final Stage registeredStage = stage;
             synchronized (LOCK) {
@@ -150,6 +151,7 @@ public final class ArchiCreoJniLauncher {
                 if (SHUTTING_DOWN.get()) return;
                 try {
                     root.getChildren().setAll(ArchiJavaFxViews.content(title, args));
+                    ArchiJavaFxViews.fitStageToContent(stage);
                 } catch (Throwable t) {
                     root.getChildren().setAll(ArchiJavaFxViews.error(throwableMessage(t)));
                 }
