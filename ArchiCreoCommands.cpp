@@ -2,9 +2,12 @@
 
 #include "ArchiJavaFxService.hpp"
 
-#include <unordered_map>
-#include <string>
+#include <algorithm>
+#include <cctype>
 #include <exception>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
 #include <utility>
 
 namespace {
@@ -17,6 +20,49 @@ enum class JavaFxAction {
 std::unordered_map<
     ArchiJavaFxService::RequestId,
     JavaFxAction> pendingActions;
+
+std::string trim(std::string value)
+{
+    const auto isSpace = [](unsigned char character) {
+        return std::isspace(character) != 0;
+    };
+
+    value.erase(
+        value.begin(),
+        std::find_if(
+            value.begin(),
+            value.end(),
+            [&](char character) {
+                return !isSpace(static_cast<unsigned char>(character));
+            }));
+
+    value.erase(
+        std::find_if(
+            value.rbegin(),
+            value.rend(),
+            [&](char character) {
+                return !isSpace(static_cast<unsigned char>(character));
+            }).base(),
+        value.end());
+
+    return value;
+}
+
+std::string getModelName(
+    const jnifx::ArchiJavaFxRuntime::JavaFxResult& result)
+{
+    if (result.values.empty()) {
+        throw std::runtime_error("JavaFX returned no model name.");
+    }
+
+    std::string modelName = trim(result.values.front());
+
+    if (modelName.empty()) {
+        throw std::runtime_error("JavaFX returned an empty model name.");
+    }
+
+    return modelName;
+}
 
 } // namespace
 
@@ -41,20 +87,26 @@ void configureJavaFxResultCallback()
 
             bool success = false;
             std::string error;
+
             try {
+                const std::string modelName = getModelName(result);
+
                 switch (action) {
                 case JavaFxAction::CreatePart:
-                    createPartFromJavaFx(result);
+                    createPartFromJavaFx(modelName, result);
                     success = true;
                     break;
+
                 case JavaFxAction::CreateAssembly:
-                    createAssemblyFromJavaFx(result);
+                    createAssemblyFromJavaFx(modelName, result);
                     success = true;
                     break;
                 }
-            } catch (const std::exception& exception) {
+            }
+            catch (const std::exception& exception) {
                 error = exception.what();
-            } catch (...) {
+            }
+            catch (...) {
                 error = "Unknown Creo processing error";
             }
 
@@ -111,6 +163,7 @@ jnifx::ArchiJavaFxRuntime::RequestId onCreateAssembly()
 }
 
 void createPartFromJavaFx(
+    const std::string& modelName,
     const jnifx::ArchiJavaFxRuntime::JavaFxResult& result)
 {
     // IMPORTANT: this callback is dispatched back to the Creo thread by
@@ -124,9 +177,11 @@ void createPartFromJavaFx(
     //
     // TODO: replace with the real Pro/TOOLKIT creation workflow.
     (void)result;
+    (void)modelName;
 }
 
 void createAssemblyFromJavaFx(
+    const std::string& modelName,
     const jnifx::ArchiJavaFxRuntime::JavaFxResult& result)
 {
     // This callback is also executed on the Creo thread. Keep all
@@ -136,4 +191,5 @@ void createAssemblyFromJavaFx(
     // Pro/TOOLKIT directly.
     // TODO: replace with the real Pro/TOOLKIT assembly workflow.
     (void)result;
+    (void)modelName;
 }
