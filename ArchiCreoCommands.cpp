@@ -191,9 +191,18 @@ void createAssemblyFromJavaFx(
     const std::string& modelName,
     const jnifx::ArchiJavaFxRuntime::JavaFxResult& result)
 {
-    (void)modelName;
     (void)result;
 
-    // Assembly creation is intentionally left explicit
-    // until its template/placement contract is defined.
+    const std::wstring modelNameWide =
+        ArchiPropertyUtils::stringToWideString(
+            modelName);
+
+    const creo::ArchiCreoModelHandler assembly =
+        creo::ArchiCreoModelHandler::createAssembly(
+            modelNameWide);
+
+    if (!assembly.isValid()) {
+        throw std::runtime_error(
+            "Creo created an invalid assembly handle.");
+    }
 }
