@@ -42,10 +42,12 @@ namespace creo {
         }
 
         void refresh() const {
+            requireWindow();
             CREO_CHECK(detail::windowRefresh(window_id_));
         }
 
         void repaint() const {
+            requireWindow();
             CREO_CHECK(detail::windowRepaint(window_id_));
         }
 
