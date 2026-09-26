@@ -6,7 +6,7 @@
 namespace creo {
 
     template<typename F>
-    class ArchiScopeGuard {
+    class ArchiScopeGuard final {
       public:
         explicit ArchiScopeGuard(F f) noexcept(std::is_nothrow_move_constructible_v<F>) :
             f_(std::move(f)) {
@@ -22,7 +22,7 @@ namespace creo {
         ArchiScopeGuard& operator=(const ArchiScopeGuard&) = delete;
         ArchiScopeGuard& operator=(ArchiScopeGuard&&) = delete;
 
-        ~ArchiScopeGuard() {
+        ~ArchiScopeGuard() noexcept {
             if (active_) {
                 f_();
             }
@@ -32,13 +32,17 @@ namespace creo {
             active_ = false;
         }
 
+        [[nodiscard]] bool active() const noexcept {
+            return active_;
+        }
+
       private:
         F f_;
         bool active_ = true;
     };
 
     template<typename F>
-    ArchiScopeGuard<std::decay_t<F>> Defer(F&& f) {
+    [[nodiscard]] ArchiScopeGuard<std::decay_t<F>> Defer(F&& f) {
         return ArchiScopeGuard<std::decay_t<F>>(std::forward<F>(f));
     }
 
