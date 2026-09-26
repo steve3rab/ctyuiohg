@@ -389,8 +389,26 @@ namespace creo {
                     ": Creo returned a null handle");
             }
 
-            return ArchiCreoModelHandler(
+            ArchiCreoModelHandler model(
                 static_cast<detail::RawMdl>(solid));
+
+            const detail::RawMdlType expected_type =
+                file_type == PRO_MDLFILE_PART
+                    ? PRO_MDL_PART
+                    : file_type == PRO_MDLFILE_ASSEMBLY
+                        ? PRO_MDL_ASSEMBLY
+                        : PRO_MDL_UNUSED;
+
+            if (expected_type != PRO_MDL_UNUSED &&
+                model.type() != expected_type) {
+                throw std::runtime_error(
+                    std::string(
+                        "ArchiCreoModelHandler::") +
+                    operation +
+                    ": Creo returned an unexpected model type");
+            }
+
+            return model;
         }
 
         void requireHandle() const {
