@@ -55,6 +55,25 @@ std::string trim(std::string value)
     return value;
 }
 
+std::string getTemplatePath(
+    const jnifx::ArchiJavaFxRuntime::JavaFxResult& result)
+{
+    if (result.values.size() < 2) {
+        throw std::runtime_error(
+            "JavaFX returned no template path.");
+    }
+
+    const std::string templatePath =
+        trim(result.values[1]);
+
+    if (templatePath.empty()) {
+        throw std::runtime_error(
+            "JavaFX returned an empty template path.");
+    }
+
+    return templatePath;
+}
+
 std::string getModelName(
     const jnifx::ArchiJavaFxRuntime::JavaFxResult& result)
 {
@@ -106,7 +125,9 @@ void configureJavaFxResultCallback()
                 switch (action) {
                 case JavaFxAction::CreatePart:
                     createPartFromJavaFx(
-                        modelName, result);
+                        modelName,
+                        getTemplatePath(result),
+                        result);
                     success = true;
                     break;
 
@@ -166,6 +187,7 @@ jnifx::ArchiJavaFxRuntime::RequestId onCreateAssembly()
 
 void createPartFromJavaFx(
     const std::string& modelName,
+    const std::string& templatePath,
     const jnifx::ArchiJavaFxRuntime::JavaFxResult& result)
 {
     (void)result;
@@ -174,22 +196,41 @@ void createPartFromJavaFx(
         ArchiPropertyUtils::stringToWideString(
             modelName);
 
-    const std::filesystem::path applicationHome =
-        ArchiPropertyUtils::environmentPath(
-            L"Archi_TOOLS");
+    const std::filesystem::path selectedTemplate =
+        std::filesystem::path(
+            ArchiPropertyUtils::stringToWideString(
+                templatePath));
 
-    // The template location is application configuration.
-    // The destination remains explicit so the caller controls where
-    // the copied Creo model is created.
-    const std::filesystem::path templatePath =
-        applicationHome / "templates" / "part.prt";
+    const std::filesystem::path templateDirectory =
+        ArchiPropertyUtils::environmentPath(
+            L"Archi_TOOLS") / "templates";
+
+    const std::filesystem::path normalizedTemplate =
+        std::filesystem::weakly_canonical(
+            selectedTemplate);
+    const std::filesystem::path normalizedDirectory =
+        std::filesystem::weakly_canonical(
+            templateDirectory);
+
+    const auto relative =
+        std::filesystem::relative(
+            normalizedTemplate,
+            normalizedDirectory);
+
+    if (relative.empty() ||
+        relative == std::filesystem::path(".") ||
+        relative.native().starts_with(L"..") ||
+        relative.is_absolute()) {
+        throw std::invalid_argument(
+            "Selected template is outside the configured template directory.");
+    }
 
     const std::filesystem::path destinationDirectory =
         creo::ArchiCreoModelHandler::creoWorkingDirectory();
 
     const creo::ArchiCreoModelHandler part =
         creo::ArchiCreoModelHandler::createPartFromTemplate(
-            templatePath,
+            normalizedTemplate,
             destinationDirectory,
             modelNameWide);
 
