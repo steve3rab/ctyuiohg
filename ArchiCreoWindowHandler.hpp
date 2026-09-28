@@ -56,6 +56,16 @@ namespace creo {
             CREO_CHECK(detail::windowActivate(window_id_));
         }
 
+        void makeCurrentAndActivate() const {
+            requireWindow();
+            CREO_CHECK(
+                detail::windowCurrentSet(
+                    window_id_));
+            CREO_CHECK(
+                detail::windowActivate(
+                    window_id_));
+        }
+
         void setCurrent() const {
             requireWindow();
             CREO_CHECK(detail::windowCurrentSet(window_id_));
