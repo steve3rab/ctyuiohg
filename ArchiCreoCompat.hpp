@@ -136,6 +136,28 @@ namespace creo::detail {
             model, p_modified);
     }
 
+    inline ProErrorCode mdlFiletypeLoad(
+        RawMdlName full_path,
+        RawMdlFileType type,
+        RawBoolean ask_user_about_reps,
+        RawMdl* p_handle) {
+        return ::ProMdlFiletypeLoad(
+            full_path,
+            type,
+            ask_user_about_reps,
+            p_handle);
+    }
+
+    inline ProErrorCode mdlnameCopy(
+        RawMdl model,
+        RawMdlName new_name,
+        RawMdl* p_new_handle) {
+        return ::ProMdlnameCopy(
+            model,
+            new_name,
+            p_new_handle);
+    }
+
     inline ProErrorCode solidMdlnameCreate(
         RawMdlName name,
         RawMdlFileType type,
