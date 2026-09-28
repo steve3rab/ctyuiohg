@@ -584,7 +584,6 @@ namespace creo {
                     ": copied model has an unexpected type");
             }
 
-            erase_template.Dismiss();
             return result;
         }
 
