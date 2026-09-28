@@ -82,6 +82,20 @@ std::string getTemplatePath(
     return templatePath;
 }
 
+void refreshCreoUiBestEffort()
+{
+    try {
+        const auto model =
+            creo::ArchiCreoModelHandler::fromCurrentWindow();
+
+        if (model.isValid()) {
+            model.refreshAfterCreation();
+        }
+    } catch (...) {
+        // Refresh is cleanup only. Never hide the original processing error.
+    }
+}
+
 std::string getModelName(
     const jnifx::ArchiJavaFxRuntime::JavaFxResult& result)
 {
@@ -151,6 +165,10 @@ void configureJavaFxResultCallback()
                 error = exception.what();
             } catch (...) {
                 error = "Unknown Creo processing error";
+            }
+
+            if (!success) {
+                refreshCreoUiBestEffort();
             }
 
             if (success) {
