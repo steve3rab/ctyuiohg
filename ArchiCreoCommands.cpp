@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <stdexcept>
 #include <string>
+#include <optional>
 #include <unordered_map>
 #include <utility>
 
@@ -281,6 +282,19 @@ void createPartFromJavaFx(
             "Selected template is outside the configured template directory.");
     }
 
+    std::optional<creo::ArchiCreoModelHandler> activeAssembly;
+
+    try {
+        const auto currentModel =
+            creo::ArchiCreoModelHandler::fromCurrentWindow();
+
+        if (currentModel.isAssembly()) {
+            activeAssembly = currentModel;
+        }
+    } catch (...) {
+        // No usable current assembly. The part will remain standalone.
+    }
+
     const std::filesystem::path destinationDirectory =
         creo::ArchiCreoModelHandler::creoWorkingDirectory();
 
@@ -290,11 +304,14 @@ void createPartFromJavaFx(
             destinationDirectory,
             modelNameWide);
 
-    // The template is loaded by Creo, copied under modelName,
-    // and the resulting model handle is returned.
     if (!part.isValid()) {
         throw std::runtime_error(
             "Creo created an invalid part handle.");
+    }
+
+    if (activeAssembly.has_value()) {
+        activeAssembly->assemblePart(part);
+        activeAssembly->refreshAfterCreation();
     }
 
     part.displayAndActivate();
