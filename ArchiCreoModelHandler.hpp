@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <optional>
 #include <stdexcept>
 #include <string>
 
@@ -64,6 +65,67 @@ namespace creo {
             return ArchiCreoModelHandler(model);
         }
 
+        static std::optional<ArchiCreoModelHandler> findPartInSession(
+            const std::wstring& model_name) {
+            return findInSession(
+                model_name,
+                PRO_MDL_PART);
+        }
+
+        static std::optional<ArchiCreoModelHandler> findInSession(
+            const std::wstring& model_name,
+            detail::RawMdlType model_type) {
+            validateModelName(
+                model_name,
+                "findInSession");
+
+            detail::RawMdl* models = nullptr;
+            int count = 0;
+
+            const detail::ProErrorCode status =
+                detail::sessionMdlList(
+                    model_type,
+                    &models,
+                    &count);
+
+            if (status == PRO_TK_E_NOT_FOUND) {
+                return std::nullopt;
+            }
+
+            CREO_CHECK(status);
+
+            auto free_models = Defer([&] {
+                CREO_CHECK(
+                    detail::sessionMdlListFree(
+                        &models));
+            });
+
+            if (models == nullptr || count <= 0) {
+                return std::nullopt;
+            }
+
+            for (int index = 0; index < count; ++index) {
+                if (models[index] == nullptr) {
+                    continue;
+                }
+
+                wchar_t current_name[
+                    PRO_MDLNAME_SIZE] = {};
+
+                CREO_CHECK(
+                    detail::mdlMdlNameGet(
+                        models[index],
+                        current_name));
+
+                if (model_name == current_name) {
+                    return ArchiCreoModelHandler(
+                        models[index]);
+                }
+            }
+
+            return std::nullopt;
+        }
+
         static ArchiCreoModelHandler createPart(
             const std::wstring& model_name) {
             return createSolid(
@@ -88,6 +150,12 @@ namespace creo {
             validateModelName(
                 model_name,
                 "createPartFromTemplate");
+
+            if (const auto existing =
+                    findPartInSession(model_name);
+                existing.has_value()) {
+                return *existing;
+            }
 
             const std::wstring source_path =
                 template_path.wstring();
