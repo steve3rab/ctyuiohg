@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <optional>
 #include <stdexcept>
 #include <string>
 
@@ -64,6 +65,67 @@ namespace creo {
             return ArchiCreoModelHandler(model);
         }
 
+        static std::optional<ArchiCreoModelHandler> findPartInSession(
+            const std::wstring& model_name) {
+            return findInSession(
+                model_name,
+                PRO_MDL_PART);
+        }
+
+        static std::optional<ArchiCreoModelHandler> findInSession(
+            const std::wstring& model_name,
+            detail::RawMdlType model_type) {
+            validateModelName(
+                model_name,
+                "findInSession");
+
+            detail::RawMdl* models = nullptr;
+            int count = 0;
+
+            const detail::ProErrorCode status =
+                detail::sessionModelList(
+                    model_type,
+                    &models,
+                    &count);
+
+            if (status == PRO_TK_E_NOT_FOUND) {
+                return std::nullopt;
+            }
+
+            CREO_CHECK(status);
+
+            auto free_models = Defer([&] {
+                CREO_CHECK(
+                    detail::sessionModelListFree(
+                        &models));
+            });
+
+            if (models == nullptr || count <= 0) {
+                return std::nullopt;
+            }
+
+            for (int index = 0; index < count; ++index) {
+                if (models[index] == nullptr) {
+                    continue;
+                }
+
+                wchar_t current_name[
+                    PRO_MDLNAME_SIZE] = {};
+
+                CREO_CHECK(
+                    detail::mdlMdlNameGet(
+                        models[index],
+                        current_name));
+
+                if (model_name == current_name) {
+                    return ArchiCreoModelHandler(
+                        models[index]);
+                }
+            }
+
+            return std::nullopt;
+        }
+
         static ArchiCreoModelHandler createPart(
             const std::wstring& model_name) {
             return createSolid(
@@ -88,6 +150,12 @@ namespace creo {
             validateModelName(
                 model_name,
                 "createPartFromTemplate");
+
+            if (const auto existing =
+                    findPartInSession(model_name);
+                existing.has_value()) {
+                return *existing;
+            }
 
             const std::wstring source_path =
                 template_path.wstring();
@@ -117,6 +185,11 @@ namespace creo {
             }
 
             ArchiCreoModelHandler source(template_model);
+
+            auto erase_template = Defer([&] {
+                CREO_CHECK(
+                    detail::mdlErase(template_model));
+            });
 
             if (!source.isPart()) {
                 throw std::runtime_error(
@@ -336,6 +409,64 @@ namespace creo {
             return info;
         }
 
+        void displayAndActivate() const {
+            requireHandle();
+
+            if (!isDisplayableType(type())) {
+                throw std::runtime_error(
+                    "ArchiCreoModelHandler::displayAndActivate: "
+                    "model type cannot be displayed");
+            }
+
+            int window_id = PRO_VALUE_UNUSED;
+            const detail::ProErrorCode window_status =
+                detail::mdlWindowGet(
+                    handle_,
+                    &window_id);
+
+            if (window_status == detail::kNoError) {
+                if (window_id == PRO_VALUE_UNUSED) {
+                    throw std::runtime_error(
+                        "ArchiCreoModelHandler::displayAndActivate: "
+                        "Creo returned an invalid window id");
+                }
+
+                CREO_CHECK(
+                    detail::mdlDisplay(handle_));
+
+                ArchiCreoWindowHandler window(
+                    window_id);
+                window.makeCurrentAndActivate();
+                return;
+            }
+
+            if (window_status != PRO_TK_E_NOT_FOUND) {
+                CREO_CHECK(window_status);
+            }
+
+            // The model is in session but has no dedicated top-level window.
+            // Normal Creo TOOLKIT behavior is to display it in the current/base
+            // view rather than forcing a new object window.
+            CREO_CHECK(
+                detail::mdlDisplay(handle_));
+
+            window_id = PRO_VALUE_UNUSED;
+            CREO_CHECK(
+                detail::mdlWindowGet(
+                    handle_,
+                    &window_id));
+
+            if (window_id == PRO_VALUE_UNUSED) {
+                throw std::runtime_error(
+                    "ArchiCreoModelHandler::displayAndActivate: "
+                    "model was displayed but Creo returned no window");
+            }
+
+            ArchiCreoWindowHandler window(
+                window_id);
+            window.makeCurrentAndActivate();
+        }
+
         void display() const {
             requireHandle();
 
@@ -379,12 +510,13 @@ namespace creo {
                     &window_id));
 
             ArchiCreoWindowHandler window(window_id);
-            window.setCurrent();
+            window.makeCurrentAndActivate();
 
             auto restore_current_window = Defer([&] {
                 if (previous_window.isValid()) {
-                    detail::windowCurrentSet(
-                        previous_window.id());
+                    CREO_CHECK(
+                        detail::windowCurrentSet(
+                            previous_window.id()));
                 }
             });
 
@@ -399,6 +531,12 @@ namespace creo {
 
         void save() const {
             requireHandle();
+
+            if (!isSaveAllowed(false)) {
+                throw std::runtime_error(
+                    "ArchiCreoModelHandler::save: "
+                    "Creo reports that the model cannot be saved");
+            }
 
             CREO_CHECK(detail::mdlSave(handle_));
 

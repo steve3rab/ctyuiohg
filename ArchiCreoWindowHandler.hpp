@@ -56,6 +56,16 @@ namespace creo {
             CREO_CHECK(detail::windowActivate(window_id_));
         }
 
+        void makeCurrentAndActivate() const {
+            requireWindow();
+            CREO_CHECK(
+                detail::windowCurrentSet(
+                    window_id_));
+            CREO_CHECK(
+                detail::windowActivate(
+                    window_id_));
+        }
+
         void setCurrent() const {
             requireWindow();
             CREO_CHECK(detail::windowCurrentSet(window_id_));
@@ -78,7 +88,8 @@ namespace creo {
 
             auto free_raw_name = Defer([&] {
                 if (raw_name != nullptr) {
-                    (void)detail::stringFree(raw_name);
+                    CREO_CHECK(
+                        detail::stringFree(raw_name));
                 }
             });
 
