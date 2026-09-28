@@ -178,16 +178,19 @@ void createPartFromJavaFx(
         ArchiPropertyUtils::environmentPath(
             L"Archi_TOOLS");
 
-    // Convention actuelle :
-    // <Archi_TOOLS>\\templates\\part.prt
-    // Cette constante pourra ensuite être remplacée par le template choisi
-    // par la configuration ou par JavaFX.
+    // The template location is application configuration.
+    // The destination remains explicit so the caller controls where
+    // the copied Creo model is created.
     const std::filesystem::path templatePath =
         applicationHome / "templates" / "part.prt";
+
+    const std::filesystem::path destinationDirectory =
+        std::filesystem::current_path();
 
     const creo::ArchiCreoModelHandler part =
         creo::ArchiCreoModelHandler::createPartFromTemplate(
             templatePath,
+            destinationDirectory,
             modelNameWide);
 
     // The template is loaded by Creo, copied under modelName,
