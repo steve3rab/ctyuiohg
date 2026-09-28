@@ -74,8 +74,13 @@ namespace creo {
 
         static ArchiCreoModelHandler createPartFromTemplate(
             const std::filesystem::path& template_path,
+            const std::filesystem::path& destination_directory,
             const std::wstring& model_name) {
             validateTemplatePartPath(template_path);
+            validateDestinationDirectory(destination_directory);
+            validateModelName(
+                model_name,
+                "createPartFromTemplate");
 
             const std::wstring source_path =
                 template_path.wstring();
@@ -83,17 +88,18 @@ namespace creo {
                 source_path,
                 "createPartFromTemplate: template path");
 
-            if (std::filesystem::path(source_path).filename().empty()) {
-                throw std::invalid_argument(
-                    "ArchiCreoModelHandler::createPartFromTemplate: "
-                    "template path has no filename");
-            }
+            const std::wstring destination_path =
+                destination_directory.wstring();
+            validateProPath(
+                destination_path,
+                "createPartFromTemplate: destination directory");
 
             detail::RawMdl template_model = nullptr;
             CREO_CHECK(
                 detail::mdlFiletypeLoad(
-                    const_cast<wchar_t*>(source_path.c_str()),
-                    PRO_MDLFILE_UNUSED,
+                    const_cast<wchar_t*>(
+                        source_path.c_str()),
+                    PRO_MDLFILE_PART,
                     PRO_B_FALSE,
                     &template_model));
 
@@ -103,18 +109,66 @@ namespace creo {
                     "Creo returned a null template handle");
             }
 
-            ArchiCreoModelHandler template_handler(template_model);
+            ArchiCreoModelHandler source(template_model);
 
-            if (!template_handler.isPart()) {
+            if (!source.isPart()) {
                 throw std::runtime_error(
                     "ArchiCreoModelHandler::createPartFromTemplate: "
                     "template is not a Creo Part");
             }
 
-            return copyModel(
-                template_handler,
-                model_name,
-                "createPartFromTemplate");
+            wchar_t previous_directory[PRO_PATH_SIZE] = {};
+            CREO_CHECK(
+                detail::directoryCurrentGet(
+                    previous_directory));
+
+            auto restore_directory = Defer([&] {
+                if (previous_directory[0] != L'\0') {
+                    (void)detail::directoryChange(
+                        previous_directory);
+                }
+            });
+
+            wchar_t mutable_destination[
+                PRO_PATH_SIZE] = {};
+            std::copy(
+                destination_path.begin(),
+                destination_path.end(),
+                mutable_destination);
+
+            CREO_CHECK(
+                detail::directoryChange(
+                    mutable_destination));
+
+            detail::RawMdlName new_name{};
+            std::copy(
+                model_name.begin(),
+                model_name.end(),
+                new_name);
+
+            detail::RawMdl copied_model = nullptr;
+            CREO_CHECK(
+                detail::mdlnameCopy(
+                    source.raw(),
+                    new_name,
+                    &copied_model));
+
+            if (copied_model == nullptr) {
+                throw std::runtime_error(
+                    "ArchiCreoModelHandler::createPartFromTemplate: "
+                    "Creo returned a null copied model handle");
+            }
+
+            ArchiCreoModelHandler result(
+                copied_model);
+
+            if (!result.isPart()) {
+                throw std::runtime_error(
+                    "ArchiCreoModelHandler::createPartFromTemplate: "
+                    "copied model is not a Creo Part");
+            }
+
+            return result;
         }
 
         static ArchiCreoModelHandler createAssembly(
@@ -403,13 +457,16 @@ namespace creo {
             const char* context) {
             if (path.empty()) {
                 throw std::invalid_argument(
-                    std::string(context) + ": empty path");
+                    std::string(context) +
+                    ": empty path");
             }
 
             if (path.size() >=
-                static_cast<std::size_t>(PRO_PATH_SIZE)) {
+                static_cast<std::size_t>(
+                    PRO_PATH_SIZE)) {
                 throw std::length_error(
-                    std::string(context) + ": path too long");
+                    std::string(context) +
+                    ": path too long");
             }
         }
 
@@ -421,26 +478,42 @@ namespace creo {
                     "empty template path");
             }
 
-            if (!std::filesystem::exists(template_path)) {
+            std::error_code error;
+            if (!std::filesystem::is_regular_file(
+                    template_path, error) ||
+                error) {
                 throw std::invalid_argument(
                     "ArchiCreoModelHandler::createPartFromTemplate: "
-                    "template does not exist: " +
+                    "template is not a regular file: " +
                     template_path.u8string());
             }
 
-            if (!std::filesystem::is_regular_file(template_path)) {
+            if (template_path.extension() != L".prt") {
                 throw std::invalid_argument(
                     "ArchiCreoModelHandler::createPartFromTemplate: "
-                    "template is not a regular file");
-            }
-
-            if (!template_path.has_extension() ||
-                template_path.extension() != L".prt") {
-                throw std::invalid_argument(
-                    "ArchiCreoModelHandler::createPartFromTemplate: "
-                    "template must be a .prt file");
+                    "template must have a .prt extension");
             }
         }
+
+        static void validateDestinationDirectory(
+            const std::filesystem::path& directory) {
+            if (directory.empty()) {
+                throw std::invalid_argument(
+                    "ArchiCreoModelHandler::createPartFromTemplate: "
+                    "empty destination directory");
+            }
+
+            std::error_code error;
+            if (!std::filesystem::is_directory(
+                    directory, error) ||
+                error) {
+                throw std::invalid_argument(
+                    "ArchiCreoModelHandler::createPartFromTemplate: "
+                    "destination directory is invalid: " +
+                    directory.u8string());
+            }
+        }
+
 
         static ArchiCreoModelHandler copyModel(
             const ArchiCreoModelHandler& source,
@@ -498,15 +571,6 @@ namespace creo {
         static void validateModelName(
             const std::wstring& model_name,
             const char* operation) {
-            validateModelName(
-                model_name,
-                operation);
-        }
-
-        static ArchiCreoModelHandler createSolid(
-            const std::wstring& model_name,
-            detail::RawMdlFileType file_type,
-            const char* operation) {
             if (model_name.empty()) {
                 throw std::invalid_argument(
                     std::string(
@@ -515,10 +579,10 @@ namespace creo {
                     ": empty model name");
             }
 
-            constexpr std::size_t kMaxCreateNameLength = 31;
+            constexpr std::size_t kMaxModelNameLength = 31;
 
             if (model_name.size() >
-                kMaxCreateNameLength) {
+                kMaxModelNameLength) {
                 throw std::invalid_argument(
                     std::string(
                         "ArchiCreoModelHandler::") +
@@ -526,6 +590,15 @@ namespace creo {
                     ": model name exceeds "
                     "Creo's 31-character limit");
             }
+        }
+
+        static ArchiCreoModelHandler createSolid(
+            const std::wstring& model_name,
+            detail::RawMdlFileType file_type,
+            const char* operation) {
+            validateModelName(
+                model_name,
+                operation);
 
             detail::RawMdlName name{};
             std::copy(
