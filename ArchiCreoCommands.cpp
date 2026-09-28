@@ -141,7 +141,9 @@ void configureJavaFxResultCallback()
 
                 case JavaFxAction::CreateAssembly:
                     createAssemblyFromJavaFx(
-                        modelName, result);
+                        modelName,
+                        getTemplatePath(result),
+                        result);
                     success = true;
                     break;
                 }
@@ -189,10 +191,21 @@ jnifx::ArchiJavaFxRuntime::RequestId onCreatePart()
 jnifx::ArchiJavaFxRuntime::RequestId onCreateAssembly()
 {
     const auto requestId =
+    const auto& templateDirectoryPath =
+        templateDirectory();
+
+    const std::string templateDirectoryUtf8 =
+        ArchiPropertyUtils::wideStringToString(
+            templateDirectoryPath.wstring());
+
+    const auto requestId =
         ArchiJavaFxService::instance()
             .openModalWindow(
                 "Create Assembly",
-                {"CREATE_ASSEMBLY"});
+                {
+                    "CREATE_ASSEMBLY",
+                    templateDirectoryUtf8
+                });
 
     if (requestId != 0) {
         pendingActions.emplace(
@@ -268,6 +281,7 @@ void createPartFromJavaFx(
 
 void createAssemblyFromJavaFx(
     const std::string& modelName,
+    const std::string& templatePath,
     const jnifx::ArchiJavaFxRuntime::JavaFxResult& result)
 {
     (void)result;
@@ -276,8 +290,46 @@ void createAssemblyFromJavaFx(
         ArchiPropertyUtils::stringToWideString(
             modelName);
 
+    const std::filesystem::path selectedTemplate =
+        std::filesystem::path(
+            ArchiPropertyUtils::stringToWideString(
+                templatePath));
+
+    const auto& templateDirectoryPath =
+        templateDirectory();
+
+    const std::filesystem::path normalizedTemplate =
+        std::filesystem::weakly_canonical(
+            selectedTemplate);
+    const std::filesystem::path normalizedDirectory =
+        std::filesystem::weakly_canonical(
+            templateDirectoryPath);
+
+    const auto relative =
+        std::filesystem::relative(
+            normalizedTemplate,
+            normalizedDirectory);
+
+    const auto firstComponent =
+        relative.empty()
+            ? std::filesystem::path{}
+            : *relative.begin();
+
+    if (relative.empty() ||
+        relative == std::filesystem::path(".") ||
+        relative.is_absolute() ||
+        firstComponent == std::filesystem::path("..")) {
+        throw std::invalid_argument(
+            "Selected template is outside the configured template directory.");
+    }
+
+    const std::filesystem::path destinationDirectory =
+        creo::ArchiCreoModelHandler::creoWorkingDirectory();
+
     const creo::ArchiCreoModelHandler assembly =
-        creo::ArchiCreoModelHandler::createAssembly(
+        creo::ArchiCreoModelHandler::createAssemblyFromTemplate(
+            normalizedTemplate,
+            destinationDirectory,
             modelNameWide);
 
     if (!assembly.isValid()) {
