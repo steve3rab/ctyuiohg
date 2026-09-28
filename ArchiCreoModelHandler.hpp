@@ -72,6 +72,13 @@ namespace creo {
                 "createPart");
         }
 
+        static std::filesystem::path creoWorkingDirectory() {
+            wchar_t buffer[PRO_PATH_SIZE] = {};
+            CREO_CHECK(
+                detail::directoryCurrentGet(buffer));
+            return std::filesystem::path(buffer);
+        }
+
         static ArchiCreoModelHandler createPartFromTemplate(
             const std::filesystem::path& template_path,
             const std::filesystem::path& destination_directory,
