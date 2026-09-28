@@ -217,10 +217,15 @@ void createPartFromJavaFx(
             normalizedTemplate,
             normalizedDirectory);
 
+    const auto firstComponent =
+        relative.empty()
+            ? std::filesystem::path{}
+            : *relative.begin();
+
     if (relative.empty() ||
         relative == std::filesystem::path(".") ||
-        relative.native().starts_with(L"..") ||
-        relative.is_absolute()) {
+        relative.is_absolute() ||
+        firstComponent == std::filesystem::path("..")) {
         throw std::invalid_argument(
             "Selected template is outside the configured template directory.");
     }
