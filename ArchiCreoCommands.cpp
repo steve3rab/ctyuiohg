@@ -185,7 +185,7 @@ void createPartFromJavaFx(
         applicationHome / "templates" / "part.prt";
 
     const std::filesystem::path destinationDirectory =
-        std::filesystem::current_path();
+        creo::ArchiCreoModelHandler::creoWorkingDirectory();
 
     const creo::ArchiCreoModelHandler part =
         creo::ArchiCreoModelHandler::createPartFromTemplate(
