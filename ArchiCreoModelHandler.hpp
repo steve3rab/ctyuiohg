@@ -83,7 +83,7 @@ namespace creo {
             int count = 0;
 
             const detail::ProErrorCode status =
-                detail::sessionMdlList(
+                detail::sessionModelList(
                     model_type,
                     &models,
                     &count);
@@ -96,7 +96,7 @@ namespace creo {
 
             auto free_models = Defer([&] {
                 CREO_CHECK(
-                    detail::sessionMdlListFree(
+                    detail::sessionModelListFree(
                         &models));
             });
 
