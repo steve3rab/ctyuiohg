@@ -188,6 +188,12 @@ final class ArchiJavaFxViews {
             final List<TemplateOption> templates =
                 new ArrayList<>();
 
+            final String extension =
+                args[0] != null &&
+                args[0].equals("CREATE_ASSEMBLY")
+                    ? ".asm"
+                    : ".prt";
+
             try (var stream = Files.list(directory)) {
                 stream
                     .filter(Files::isRegularFile)
@@ -195,7 +201,7 @@ final class ArchiJavaFxViews {
                         path.getFileName()
                             .toString()
                             .toLowerCase()
-                            .endsWith(".prt"))
+                            .endsWith(extension))
                     .sorted(Comparator.comparing(
                         path -> path.getFileName()
                             .toString(),
