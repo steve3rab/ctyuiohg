@@ -24,6 +24,14 @@ std::unordered_map<
     ArchiJavaFxService::RequestId,
     JavaFxAction> pendingActions;
 
+const std::filesystem::path& templateDirectory()
+{
+    static const std::filesystem::path directory =
+        ArchiPropertyUtils::environmentPath(
+            L"Archi_TOOLS") / "templates";
+    return directory;
+}
+
 std::string trim(std::string value)
 {
     const auto isSpace = [](unsigned char character) {
@@ -153,13 +161,12 @@ void configureJavaFxResultCallback()
 
 jnifx::ArchiJavaFxRuntime::RequestId onCreatePart()
 {
-    const std::filesystem::path templateDirectory =
-        ArchiPropertyUtils::environmentPath(
-            L"Archi_TOOLS") / "templates";
+    const auto& templateDirectoryPath =
+        templateDirectory();
 
     const std::string templateDirectoryUtf8 =
         ArchiPropertyUtils::wideStringToString(
-            templateDirectory.wstring());
+            templateDirectoryPath.wstring());
 
     const auto requestId =
         ArchiJavaFxService::instance()
@@ -212,16 +219,15 @@ void createPartFromJavaFx(
             ArchiPropertyUtils::stringToWideString(
                 templatePath));
 
-    const std::filesystem::path templateDirectory =
-        ArchiPropertyUtils::environmentPath(
-            L"Archi_TOOLS") / "templates";
+    const auto& templateDirectoryPath =
+        templateDirectory();
 
     const std::filesystem::path normalizedTemplate =
         std::filesystem::weakly_canonical(
             selectedTemplate);
     const std::filesystem::path normalizedDirectory =
         std::filesystem::weakly_canonical(
-            templateDirectory);
+            templateDirectoryPath);
 
     const auto relative =
         std::filesystem::relative(
