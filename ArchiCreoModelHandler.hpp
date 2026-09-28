@@ -409,6 +409,64 @@ namespace creo {
             return info;
         }
 
+        void displayAndActivate() const {
+            requireHandle();
+
+            if (!isDisplayableType(type())) {
+                throw std::runtime_error(
+                    "ArchiCreoModelHandler::displayAndActivate: "
+                    "model type cannot be displayed");
+            }
+
+            int window_id = PRO_VALUE_UNUSED;
+            const detail::ProErrorCode window_status =
+                detail::mdlWindowGet(
+                    handle_,
+                    &window_id);
+
+            if (window_status == detail::kNoError) {
+                if (window_id == PRO_VALUE_UNUSED) {
+                    throw std::runtime_error(
+                        "ArchiCreoModelHandler::displayAndActivate: "
+                        "Creo returned an invalid window id");
+                }
+
+                CREO_CHECK(
+                    detail::mdlDisplay(handle_));
+
+                ArchiCreoWindowHandler window(
+                    window_id);
+                window.makeCurrentAndActivate();
+                return;
+            }
+
+            if (window_status != PRO_TK_E_NOT_FOUND) {
+                CREO_CHECK(window_status);
+            }
+
+            // The model is in session but has no dedicated top-level window.
+            // Normal Creo TOOLKIT behavior is to display it in the current/base
+            // view rather than forcing a new object window.
+            CREO_CHECK(
+                detail::mdlDisplay(handle_));
+
+            window_id = PRO_VALUE_UNUSED;
+            CREO_CHECK(
+                detail::mdlWindowGet(
+                    handle_,
+                    &window_id));
+
+            if (window_id == PRO_VALUE_UNUSED) {
+                throw std::runtime_error(
+                    "ArchiCreoModelHandler::displayAndActivate: "
+                    "model was displayed but Creo returned no window");
+            }
+
+            ArchiCreoWindowHandler window(
+                window_id);
+            window.makeCurrentAndActivate();
+        }
+
         void display() const {
             requireHandle();
 
@@ -452,7 +510,7 @@ namespace creo {
                     &window_id));
 
             ArchiCreoWindowHandler window(window_id);
-            window.setCurrent();
+            window.makeCurrentAndActivate();
 
             auto restore_current_window = Defer([&] {
                 if (previous_window.isValid()) {
