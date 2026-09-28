@@ -82,8 +82,28 @@ namespace creo {
                     "with PRO_REGEN_UNDO_IF_FAIL");
             }
 
+            const bool canFix =
+                (flags & PRO_REGEN_CAN_FIX) != 0;
+            const bool noResolve =
+                (flags & PRO_REGEN_NO_RESOLVE_MODE) != 0;
+            const bool resolve =
+                (flags & PRO_REGEN_RESOLVE_MODE) != 0;
+
+            if (noResolve && resolve) {
+                throw std::invalid_argument(
+                    "ArchiCreoSolidHandler::regenerate: "
+                    "PRO_REGEN_NO_RESOLVE_MODE cannot be combined "
+                    "with PRO_REGEN_RESOLVE_MODE");
+            }
+
+            if (canFix && noResolve) {
+                throw std::invalid_argument(
+                    "ArchiCreoSolidHandler::regenerate: "
+                    "PRO_REGEN_CAN_FIX requires Resolve mode");
+            }
+
             if ((flags & PRO_REGEN_SKIP_DISALLOW_SYS_RECOVER) != 0 &&
-                (flags & PRO_REGEN_CAN_FIX) == 0) {
+                !canFix) {
                 throw std::invalid_argument(
                     "ArchiCreoSolidHandler::regenerate: "
                     "PRO_REGEN_SKIP_DISALLOW_SYS_RECOVER requires "
@@ -91,22 +111,23 @@ namespace creo {
             }
 
             if ((flags & PRO_REGEN_RGN_BCK_USING_DISK) != 0 &&
-                (flags & PRO_REGEN_CAN_FIX) == 0) {
+                !canFix) {
                 throw std::invalid_argument(
                     "ArchiCreoSolidHandler::regenerate: "
                     "PRO_REGEN_RGN_BCK_USING_DISK requires "
                     "PRO_REGEN_CAN_FIX");
             }
 
-            if ((flags & PRO_REGEN_NO_RESOLVE_MODE) != 0 &&
-                (flags & PRO_REGEN_RESOLVE_MODE) != 0) {
+            if (((flags & PRO_REGEN_ALLOW_CONFIRM) != 0 ||
+                 (flags & PRO_REGEN_UNDO_IF_FAIL) != 0) &&
+                !noResolve) {
                 throw std::invalid_argument(
                     "ArchiCreoSolidHandler::regenerate: "
-                    "PRO_REGEN_NO_RESOLVE_MODE cannot be combined "
-                    "with PRO_REGEN_RESOLVE_MODE");
+                    "PRO_REGEN_ALLOW_CONFIRM and "
+                    "PRO_REGEN_UNDO_IF_FAIL require "
+                    "No-Resolve mode");
             }
         }
-
         void requireHandle() const {
             if (handle_ == nullptr) {
                 throw std::invalid_argument(
