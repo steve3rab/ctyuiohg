@@ -14,13 +14,13 @@ namespace creo::detail {
 
     using ProErrorCode = ::ProError;
     using RawMdl = ::ProMdl;
+    using RawPath = ::ProPath;
     using RawArray = ::ProArray;
     using RawBoolean = ::ProBoolean;
     using RawModelItem = ::ProModelitem;
     using RawMdlType = ::ProMdlType;
     using RawMdlName = ::ProMdlName;
     using RawMdlFileType = ::ProMdlfileType;
-    using RawMdlFileRetrieveOpt = ::ProFileRetrieveOpt;
     using RawObjectType = ::ProType;
     using RawSolid = ::ProSolid;
 
@@ -137,7 +137,7 @@ namespace creo::detail {
     }
 
     inline ProErrorCode mdlFiletypeLoad(
-        RawMdlName full_path,
+        RawPath full_path,
         RawMdlFileType type,
         RawBoolean ask_user_about_reps,
         RawMdl* p_handle) {
@@ -233,6 +233,16 @@ namespace creo::detail {
         wchar_t* option_value) {
         return ::ProConfigoptSet(
             option, option_value);
+    }
+
+    inline ProErrorCode directoryChange(
+        RawPath path) {
+        return ::ProDirectoryChange(path);
+    }
+
+    inline ProErrorCode directoryCurrentGet(
+        RawPath path) {
+        return ::ProDirectoryCurrentGet(path);
     }
 
     inline ProErrorCode engineerConnectIdGet(
