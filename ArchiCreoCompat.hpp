@@ -105,6 +105,10 @@ namespace creo::detail {
         return ::ProMdlDisplay(model);
     }
 
+    inline ProErrorCode treetoolRefresh(RawMdl model) {
+        return ::ProTreetoolRefresh(model);
+    }
+
     inline ProErrorCode sessionModelList(
         RawMdlType model_type,
         RawMdl** p_model_array,
