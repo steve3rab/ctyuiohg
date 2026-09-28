@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cctype>
 #include <exception>
+#include <filesystem>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -173,14 +174,24 @@ void createPartFromJavaFx(
         ArchiPropertyUtils::stringToWideString(
             modelName);
 
+    const std::filesystem::path applicationHome =
+        ArchiPropertyUtils::environmentPath(
+            L"Archi_TOOLS");
+
+    // Convention actuelle :
+    // <Archi_TOOLS>\\templates\\part.prt
+    // Cette constante pourra ensuite être remplacée par le template choisi
+    // par la configuration ou par JavaFX.
+    const std::filesystem::path templatePath =
+        applicationHome / "templates" / "part.prt";
+
     const creo::ArchiCreoModelHandler part =
-        creo::ArchiCreoModelHandler::createPart(
+        creo::ArchiCreoModelHandler::createPartFromTemplate(
+            templatePath,
             modelNameWide);
 
-    // ProSolidMdlnameCreate creates the model in the
-    // Creo session but does not make it current or
-    // display it. Display/current handling stays
-    // explicit and separate from model creation.
+    // The template is loaded by Creo, copied under modelName,
+    // and the resulting model handle is returned.
     if (!part.isValid()) {
         throw std::runtime_error(
             "Creo created an invalid part handle.");
