@@ -1,6 +1,8 @@
 #pragma once
 
 #include <ProArray.h>
+#include <ProAsmcomp.h>
+#include <ProAsmcomppath.h>
 #include <ProAssembly.h>
 #include <ProCore.h>
 #include <ProMdl.h>
@@ -23,6 +25,11 @@ namespace creo::detail {
     using RawMdlFileType = ::ProMdlfileType;
     using RawObjectType = ::ProType;
     using RawSolid = ::ProSolid;
+    using RawAssembly = ::ProAssembly;
+    using RawAsmcomp = ::ProAsmcomp;
+    using RawMatrix = ::ProMatrix;
+    using RawVector = ::ProVector;
+    using RawPoint3d = ::ProPoint3d;
 
     inline constexpr RawBoolean kBooleanFalse = PRO_B_FALSE;
     inline constexpr RawBoolean kBooleanTrue = PRO_B_TRUE;
@@ -107,6 +114,32 @@ namespace creo::detail {
 
     inline ProErrorCode treetoolRefresh(RawMdl model) {
         return ::ProTreetoolRefresh(model);
+    }
+
+    inline ProErrorCode asmcompAssemble(
+        RawAssembly assembly,
+        RawSolid component_model,
+        RawMatrix init_position,
+        RawAsmcomp* p_feature) {
+        return ::ProAsmcompAssemble(
+            assembly,
+            component_model,
+            init_position,
+            p_feature);
+    }
+
+    inline ProErrorCode matrixInit(
+        RawVector x_vector,
+        RawVector y_vector,
+        RawVector z_vector,
+        RawPoint3d origin,
+        RawMatrix matrix) {
+        return ::ProMatrixInit(
+            x_vector,
+            y_vector,
+            z_vector,
+            origin,
+            matrix);
     }
 
     inline ProErrorCode sessionModelList(
