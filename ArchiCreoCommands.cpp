@@ -276,6 +276,7 @@ void createPartFromJavaFx(
     }
 
     part.displayAndActivate();
+    part.refreshAfterCreation();
 }
 
 void createAssemblyFromJavaFx(
@@ -337,4 +338,5 @@ void createAssemblyFromJavaFx(
     }
 
     assembly.displayAndActivate();
+    assembly.refreshAfterCreation();
 }
