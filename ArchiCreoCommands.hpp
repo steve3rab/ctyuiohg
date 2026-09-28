@@ -11,6 +11,7 @@ jnifx::ArchiJavaFxRuntime::RequestId onCreateAssembly();
 
 void createPartFromJavaFx(
     const std::string& modelName,
+    const std::string& templatePath,
     const jnifx::ArchiJavaFxRuntime::JavaFxResult& result);
 
 void createAssemblyFromJavaFx(
