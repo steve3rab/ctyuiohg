@@ -385,6 +385,24 @@ namespace creo {
             window.makeCurrentAndActivate();
         }
 
+        void refreshAfterCreation() const {
+            requireHandle();
+
+            CREO_CHECK(detail::mdlDisplay(handle_));
+
+            const ArchiCreoWindowHandler model_window =
+                window();
+            model_window.refresh();
+            model_window.repaint();
+
+            const detail::ProErrorCode tree_status =
+                detail::treetoolRefresh(handle_);
+
+            if (tree_status != PRO_TK_E_NOT_FOUND) {
+                CREO_CHECK(tree_status);
+            }
+        }
+
         void display() const {
             requireHandle();
 
