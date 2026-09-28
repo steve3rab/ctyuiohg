@@ -116,10 +116,10 @@ void configureJavaFxResultCallback()
             }
 
             const JavaFxAction action = it->second;
-            pendingActions.erase(it);
 
             if (result.status !=
                 jnifx::ArchiJavaFxRuntime::JavaFxResult::Status::Accepted) {
+                pendingActions.erase(it);
                 return;
             }
 
@@ -151,6 +151,10 @@ void configureJavaFxResultCallback()
                 error = exception.what();
             } catch (...) {
                 error = "Unknown Creo processing error";
+            }
+
+            if (success) {
+                pendingActions.erase(it);
             }
 
             ArchiJavaFxService::instance()
