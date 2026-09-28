@@ -190,7 +190,6 @@ jnifx::ArchiJavaFxRuntime::RequestId onCreatePart()
 
 jnifx::ArchiJavaFxRuntime::RequestId onCreateAssembly()
 {
-    const auto requestId =
     const auto& templateDirectoryPath =
         templateDirectory();
 
