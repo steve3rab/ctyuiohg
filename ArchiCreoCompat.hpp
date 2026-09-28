@@ -115,6 +115,10 @@ namespace creo::detail {
         return ::ProMdlSave(model);
     }
 
+    inline ProErrorCode mdlErase(RawMdl model) {
+        return ::ProMdlErase(model);
+    }
+
     inline ProErrorCode mdlIsSaveAllowed(
         RawMdl model,
         RawBoolean show_ui,
