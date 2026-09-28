@@ -105,6 +105,28 @@ namespace creo::detail {
         return ::ProMdlDisplay(model);
     }
 
+    inline ProErrorCode sessionModelList(
+        RawMdlType model_type,
+        RawMdl** p_model_array,
+        int* p_count) {
+        return ::ProSessionMdlList(
+            model_type,
+            p_model_array,
+            p_count);
+    }
+
+    inline ProErrorCode sessionModelListFree(
+        RawMdl** p_model_array) {
+        if (p_model_array == nullptr ||
+            *p_model_array == nullptr) {
+            return kNoError;
+        }
+
+        return ::ProArrayFree(
+            reinterpret_cast<RawArray*>(
+                p_model_array));
+    }
+
     inline ProErrorCode mdlWindowGet(
         RawMdl model,
         int* window_id) {
