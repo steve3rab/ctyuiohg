@@ -256,6 +256,8 @@ void createPartFromJavaFx(
         throw std::runtime_error(
             "Creo created an invalid part handle.");
     }
+
+    part.displayAndActivate();
 }
 
 void createAssemblyFromJavaFx(
@@ -276,4 +278,6 @@ void createAssemblyFromJavaFx(
         throw std::runtime_error(
             "Creo created an invalid assembly handle.");
     }
+
+    assembly.displayAndActivate();
 }
