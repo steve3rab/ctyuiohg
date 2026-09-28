@@ -533,12 +533,16 @@ namespace creo {
             }
         }
 
-        static void validateTemplatePartPath(
-            const std::filesystem::path& template_path) {
+        static void validateTemplatePath(
+            const std::filesystem::path& template_path,
+            const wchar_t* expected_extension,
+            const char* operation) {
             if (template_path.empty()) {
                 throw std::invalid_argument(
-                    "ArchiCreoModelHandler::createPartFromTemplate: "
-                    "empty template path");
+                    std::string(
+                        "ArchiCreoModelHandler::") +
+                    operation +
+                    ": empty template path");
             }
 
             std::error_code error;
@@ -546,15 +550,22 @@ namespace creo {
                     template_path, error) ||
                 error) {
                 throw std::invalid_argument(
-                    "ArchiCreoModelHandler::createPartFromTemplate: "
-                    "template is not a regular file: " +
+                    std::string(
+                        "ArchiCreoModelHandler::") +
+                    operation +
+                    ": template is not a regular file: " +
                     template_path.u8string());
             }
 
-            if (template_path.extension() != L".prt") {
+            if (template_path.extension() != expected_extension) {
                 throw std::invalid_argument(
-                    "ArchiCreoModelHandler::createPartFromTemplate: "
-                    "template must have a .prt extension");
+                    std::string(
+                        "ArchiCreoModelHandler::") +
+                    operation +
+                    ": template must have a " +
+                    ArchiPropertyUtils::wideStringToString(
+                        std::wstring(expected_extension)) +
+                    " extension");
             }
         }
 
