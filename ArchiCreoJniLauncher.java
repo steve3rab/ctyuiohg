@@ -179,12 +179,40 @@ public final class ArchiCreoJniLauncher {
     }
 
     /** Accepts the current form values and keeps the window open while native processing runs. */
-    public static void acceptWindow(long requestId, String modelName) {
-        final String safeName = modelName == null ? "" : modelName.trim();
+    public static void acceptWindow(
+        long requestId,
+        String modelName,
+        String templatePath) {
+        final String safeName =
+            modelName == null ? "" : modelName.trim();
+        final String safeTemplate =
+            templatePath == null ? "" : templatePath.trim();
+
+        if (safeName.isEmpty() || safeTemplate.isEmpty()) {
+            return;
+        }
+
+        finishWindow(
+            requestId,
+            0,
+            new String[] { safeName, safeTemplate });
+    }
+
+    /** Backward-compatible overload for callers that do not select a template. */
+    public static void acceptWindow(
+        long requestId,
+        String modelName) {
+        final String safeName =
+            modelName == null ? "" : modelName.trim();
+
         if (safeName.isEmpty()) {
             return;
         }
-        finishWindow(requestId, 0, new String[] { safeName });
+
+        finishWindow(
+            requestId,
+            0,
+            new String[] { safeName });
     }
 
     /** Cancels the current request and closes its JavaFX window. */
@@ -267,6 +295,8 @@ public final class ArchiCreoJniLauncher {
         showErrorState(stage, message == null || message.isEmpty()
             ? "Processing failed. Please check the input and try again."
             : message);
+        // Keep native request state synchronized with the JavaFX retry state.
+        nativeProcessingFinished(requestId, false);
     }
 
     /**

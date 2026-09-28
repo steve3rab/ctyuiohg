@@ -1,10 +1,16 @@
 #include "ArchiCreoCommands.hpp"
 
+#include "ArchiCreoModelHandler.hpp"
 #include "ArchiJavaFxService.hpp"
+#include "ArchiPropertyUtils.hpp"
 
-#include <unordered_map>
-#include <string>
+#include <algorithm>
+#include <cctype>
 #include <exception>
+#include <filesystem>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
 #include <utility>
 
 namespace {
@@ -18,6 +24,75 @@ std::unordered_map<
     ArchiJavaFxService::RequestId,
     JavaFxAction> pendingActions;
 
+std::string trim(std::string value)
+{
+    const auto isSpace = [](unsigned char character) {
+        return std::isspace(character) != 0;
+    };
+
+    value.erase(
+        value.begin(),
+        std::find_if(
+            value.begin(),
+            value.end(),
+            [&](char character) {
+                return !isSpace(
+                    static_cast<unsigned char>(
+                        character));
+            }));
+
+    value.erase(
+        std::find_if(
+            value.rbegin(),
+            value.rend(),
+            [&](char character) {
+                return !isSpace(
+                    static_cast<unsigned char>(
+                        character));
+            }).base(),
+        value.end());
+
+    return value;
+}
+
+std::string getTemplatePath(
+    const jnifx::ArchiJavaFxRuntime::JavaFxResult& result)
+{
+    if (result.values.size() < 2) {
+        throw std::runtime_error(
+            "JavaFX returned no template path.");
+    }
+
+    const std::string templatePath =
+        trim(result.values[1]);
+
+    if (templatePath.empty()) {
+        throw std::runtime_error(
+            "JavaFX returned an empty template path.");
+    }
+
+    return templatePath;
+}
+
+std::string getModelName(
+    const jnifx::ArchiJavaFxRuntime::JavaFxResult& result)
+{
+    if (result.values.empty()) {
+        throw std::runtime_error(
+            "JavaFX returned no model name.");
+    }
+
+    std::string modelName =
+        trim(result.values.front());
+
+    if (modelName.empty()) {
+        throw std::runtime_error(
+            "JavaFX returned an empty model name.");
+    }
+
+    return modelName;
+}
+
 } // namespace
 
 void configureJavaFxResultCallback()
@@ -25,7 +100,8 @@ void configureJavaFxResultCallback()
     ArchiJavaFxService::instance().setResultCallback(
         [](jnifx::ArchiJavaFxRuntime::JavaFxResult result)
         {
-            const auto it = pendingActions.find(result.requestId);
+            const auto it =
+                pendingActions.find(result.requestId);
 
             if (it == pendingActions.end()) {
                 return;
@@ -41,14 +117,23 @@ void configureJavaFxResultCallback()
 
             bool success = false;
             std::string error;
+
             try {
+                const std::string modelName =
+                    getModelName(result);
+
                 switch (action) {
                 case JavaFxAction::CreatePart:
-                    createPartFromJavaFx(result);
+                    createPartFromJavaFx(
+                        modelName,
+                        getTemplatePath(result),
+                        result);
                     success = true;
                     break;
+
                 case JavaFxAction::CreateAssembly:
-                    createAssemblyFromJavaFx(result);
+                    createAssemblyFromJavaFx(
+                        modelName, result);
                     success = true;
                     break;
                 }
@@ -58,32 +143,32 @@ void configureJavaFxResultCallback()
                 error = "Unknown Creo processing error";
             }
 
-            ArchiJavaFxService::instance().completeProcessing(
-                result.requestId,
-                success,
-                std::move(error));
+            ArchiJavaFxService::instance()
+                .completeProcessing(
+                    result.requestId,
+                    success,
+                    std::move(error));
         });
 }
 
 jnifx::ArchiJavaFxRuntime::RequestId onCreatePart()
 {
-    // This function is called by Creo's command/UI callback.
-    // Keep all Pro/TOOLKIT work that must happen BEFORE the JavaFX dialog here.
-    // Example:
-    //   ProMdlCurrentGet(...);
-    //   ProParameterValueGet(...);
-    //   ...
-    //
-    // Do not move those calls into the JVM thread or JavaFX Application Thread.
-    // The JavaFX window is opened only after this Creo-side preparation returns.
-    //
-    // TODO: add the actual Create Part preparation once its TOOLKIT contract
-    // (model, template, parameters, etc.) is defined.
+    const std::filesystem::path templateDirectory =
+        ArchiPropertyUtils::environmentPath(
+            L"Archi_TOOLS") / "templates";
+
+    const std::string templateDirectoryUtf8 =
+        ArchiPropertyUtils::wideStringToString(
+            templateDirectory.wstring());
 
     const auto requestId =
-        ArchiJavaFxService::instance().openModalWindow(
-            "Create Part",
-            {"CREATE_PART"});
+        ArchiJavaFxService::instance()
+            .openModalWindow(
+                "Create Part",
+                {
+                    "CREATE_PART",
+                    templateDirectoryUtf8
+                });
 
     if (requestId != 0) {
         pendingActions.emplace(
@@ -97,9 +182,10 @@ jnifx::ArchiJavaFxRuntime::RequestId onCreatePart()
 jnifx::ArchiJavaFxRuntime::RequestId onCreateAssembly()
 {
     const auto requestId =
-        ArchiJavaFxService::instance().openModalWindow(
-            "Create Assembly",
-            {"CREATE_ASSEMBLY"});
+        ArchiJavaFxService::instance()
+            .openModalWindow(
+                "Create Assembly",
+                {"CREATE_ASSEMBLY"});
 
     if (requestId != 0) {
         pendingActions.emplace(
@@ -111,29 +197,83 @@ jnifx::ArchiJavaFxRuntime::RequestId onCreateAssembly()
 }
 
 void createPartFromJavaFx(
+    const std::string& modelName,
+    const std::string& templatePath,
     const jnifx::ArchiJavaFxRuntime::JavaFxResult& result)
 {
-    // IMPORTANT: this callback is dispatched back to the Creo thread by
-    // ArchiCreoUiDispatcher. Pro/TOOLKIT calls belong here, not on the JVM/FX
-    // thread.
-    //
-    // This is the AFTER-JavaFX phase:
-    //   1. JavaFX returns the user's values.
-    //   2. This function performs the actual Pro/TOOLKIT operation.
-    //   3. The caller completes the request only after this function returns.
-    //
-    // TODO: replace with the real Pro/TOOLKIT creation workflow.
     (void)result;
+
+    const std::wstring modelNameWide =
+        ArchiPropertyUtils::stringToWideString(
+            modelName);
+
+    const std::filesystem::path selectedTemplate =
+        std::filesystem::path(
+            ArchiPropertyUtils::stringToWideString(
+                templatePath));
+
+    const std::filesystem::path templateDirectory =
+        ArchiPropertyUtils::environmentPath(
+            L"Archi_TOOLS") / "templates";
+
+    const std::filesystem::path normalizedTemplate =
+        std::filesystem::weakly_canonical(
+            selectedTemplate);
+    const std::filesystem::path normalizedDirectory =
+        std::filesystem::weakly_canonical(
+            templateDirectory);
+
+    const auto relative =
+        std::filesystem::relative(
+            normalizedTemplate,
+            normalizedDirectory);
+
+    const auto firstComponent =
+        relative.empty()
+            ? std::filesystem::path{}
+            : *relative.begin();
+
+    if (relative.empty() ||
+        relative == std::filesystem::path(".") ||
+        relative.is_absolute() ||
+        firstComponent == std::filesystem::path("..")) {
+        throw std::invalid_argument(
+            "Selected template is outside the configured template directory.");
+    }
+
+    const std::filesystem::path destinationDirectory =
+        creo::ArchiCreoModelHandler::creoWorkingDirectory();
+
+    const creo::ArchiCreoModelHandler part =
+        creo::ArchiCreoModelHandler::createPartFromTemplate(
+            normalizedTemplate,
+            destinationDirectory,
+            modelNameWide);
+
+    // The template is loaded by Creo, copied under modelName,
+    // and the resulting model handle is returned.
+    if (!part.isValid()) {
+        throw std::runtime_error(
+            "Creo created an invalid part handle.");
+    }
 }
 
 void createAssemblyFromJavaFx(
+    const std::string& modelName,
     const jnifx::ArchiJavaFxRuntime::JavaFxResult& result)
 {
-    // This callback is also executed on the Creo thread. Keep all
-    // Pro/TOOLKIT work in this function.
-    //
-    // This is the AFTER-JavaFX phase; the JavaFX/JNI threads must never call
-    // Pro/TOOLKIT directly.
-    // TODO: replace with the real Pro/TOOLKIT assembly workflow.
     (void)result;
+
+    const std::wstring modelNameWide =
+        ArchiPropertyUtils::stringToWideString(
+            modelName);
+
+    const creo::ArchiCreoModelHandler assembly =
+        creo::ArchiCreoModelHandler::createAssembly(
+            modelNameWide);
+
+    if (!assembly.isValid()) {
+        throw std::runtime_error(
+            "Creo created an invalid assembly handle.");
+    }
 }

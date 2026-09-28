@@ -437,11 +437,9 @@ namespace jnifx {
         }
 
         if (!accepted && modal) {
-            const bool unblocked = hostModalGuard_.unblock(config_.modalBlockTimeout);
-            if (!unblocked) {
-                std::lock_guard lock(mutex_);
-                lastError_ = "Unable to unblock Creo after closing JavaFX window";
-            }
+            // Never block the JavaFX Application Thread waiting for the Creo
+            // owner thread. The host guard posts the unblock to its owner thread.
+            hostModalGuard_.unblockAsync();
         }
 
         if (!callback) {
@@ -491,11 +489,9 @@ namespace jnifx {
             }
         }
         if (modal) {
-            const bool unblocked = hostModalGuard_.unblock(config_.modalBlockTimeout);
-            if (!unblocked) {
-                std::lock_guard lock(mutex_);
-                lastError_ = "Unable to unblock Creo after JavaFX processing completed";
-            }
+            // Completion is called from the JavaFX Application Thread. Releasing
+            // Creo must therefore remain asynchronous.
+            hostModalGuard_.unblockAsync();
         }
     }
 
