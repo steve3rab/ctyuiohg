@@ -153,11 +153,22 @@ void configureJavaFxResultCallback()
 
 jnifx::ArchiJavaFxRuntime::RequestId onCreatePart()
 {
+    const std::filesystem::path templateDirectory =
+        ArchiPropertyUtils::environmentPath(
+            L"Archi_TOOLS") / "templates";
+
+    const std::string templateDirectoryUtf8 =
+        ArchiPropertyUtils::wideStringToString(
+            templateDirectory.wstring());
+
     const auto requestId =
         ArchiJavaFxService::instance()
             .openModalWindow(
                 "Create Part",
-                {"CREATE_PART"});
+                {
+                    "CREATE_PART",
+                    templateDirectoryUtf8
+                });
 
     if (requestId != 0) {
         pendingActions.emplace(
