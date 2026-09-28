@@ -118,6 +118,11 @@ namespace creo {
 
             ArchiCreoModelHandler source(template_model);
 
+            auto erase_template = Defer([&] {
+                CREO_CHECK(
+                    detail::mdlErase(template_model));
+            });
+
             if (!source.isPart()) {
                 throw std::runtime_error(
                     "ArchiCreoModelHandler::createPartFromTemplate: "
@@ -383,8 +388,9 @@ namespace creo {
 
             auto restore_current_window = Defer([&] {
                 if (previous_window.isValid()) {
-                    detail::windowCurrentSet(
-                        previous_window.id());
+                    CREO_CHECK(
+                        detail::windowCurrentSet(
+                            previous_window.id()));
                 }
             });
 
@@ -399,6 +405,12 @@ namespace creo {
 
         void save() const {
             requireHandle();
+
+            if (!isSaveAllowed(false)) {
+                throw std::runtime_error(
+                    "ArchiCreoModelHandler::save: "
+                    "Creo reports that the model cannot be saved");
+            }
 
             CREO_CHECK(detail::mdlSave(handle_));
 
@@ -572,6 +584,7 @@ namespace creo {
                     ": copied model has an unexpected type");
             }
 
+            erase_template.Dismiss();
             return result;
         }
 
