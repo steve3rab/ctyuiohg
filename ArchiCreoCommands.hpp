@@ -16,4 +16,5 @@ void createPartFromJavaFx(
 
 void createAssemblyFromJavaFx(
     const std::string& modelName,
+    const std::string& templatePath,
     const jnifx::ArchiJavaFxRuntime::JavaFxResult& result);

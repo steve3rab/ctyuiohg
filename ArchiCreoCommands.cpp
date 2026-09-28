@@ -82,6 +82,20 @@ std::string getTemplatePath(
     return templatePath;
 }
 
+void refreshCreoUiBestEffort()
+{
+    try {
+        const auto model =
+            creo::ArchiCreoModelHandler::fromCurrentWindow();
+
+        if (model.isValid()) {
+            model.refreshAfterCreation();
+        }
+    } catch (...) {
+        // Refresh is cleanup only. Never hide the original processing error.
+    }
+}
+
 std::string getModelName(
     const jnifx::ArchiJavaFxRuntime::JavaFxResult& result)
 {
@@ -116,10 +130,10 @@ void configureJavaFxResultCallback()
             }
 
             const JavaFxAction action = it->second;
-            pendingActions.erase(it);
 
             if (result.status !=
                 jnifx::ArchiJavaFxRuntime::JavaFxResult::Status::Accepted) {
+                pendingActions.erase(it);
                 return;
             }
 
@@ -141,7 +155,9 @@ void configureJavaFxResultCallback()
 
                 case JavaFxAction::CreateAssembly:
                     createAssemblyFromJavaFx(
-                        modelName, result);
+                        modelName,
+                        getTemplatePath(result),
+                        result);
                     success = true;
                     break;
                 }
@@ -149,6 +165,14 @@ void configureJavaFxResultCallback()
                 error = exception.what();
             } catch (...) {
                 error = "Unknown Creo processing error";
+            }
+
+            if (!success) {
+                refreshCreoUiBestEffort();
+            }
+
+            if (success) {
+                pendingActions.erase(it);
             }
 
             ArchiJavaFxService::instance()
@@ -188,11 +212,21 @@ jnifx::ArchiJavaFxRuntime::RequestId onCreatePart()
 
 jnifx::ArchiJavaFxRuntime::RequestId onCreateAssembly()
 {
+    const auto& templateDirectoryPath =
+        templateDirectory();
+
+    const std::string templateDirectoryUtf8 =
+        ArchiPropertyUtils::wideStringToString(
+            templateDirectoryPath.wstring());
+
     const auto requestId =
         ArchiJavaFxService::instance()
             .openModalWindow(
                 "Create Assembly",
-                {"CREATE_ASSEMBLY"});
+                {
+                    "CREATE_ASSEMBLY",
+                    templateDirectoryUtf8
+                });
 
     if (requestId != 0) {
         pendingActions.emplace(
@@ -264,10 +298,12 @@ void createPartFromJavaFx(
     }
 
     part.displayAndActivate();
+    part.refreshAfterCreation();
 }
 
 void createAssemblyFromJavaFx(
     const std::string& modelName,
+    const std::string& templatePath,
     const jnifx::ArchiJavaFxRuntime::JavaFxResult& result)
 {
     (void)result;
@@ -276,8 +312,46 @@ void createAssemblyFromJavaFx(
         ArchiPropertyUtils::stringToWideString(
             modelName);
 
+    const std::filesystem::path selectedTemplate =
+        std::filesystem::path(
+            ArchiPropertyUtils::stringToWideString(
+                templatePath));
+
+    const auto& templateDirectoryPath =
+        templateDirectory();
+
+    const std::filesystem::path normalizedTemplate =
+        std::filesystem::weakly_canonical(
+            selectedTemplate);
+    const std::filesystem::path normalizedDirectory =
+        std::filesystem::weakly_canonical(
+            templateDirectoryPath);
+
+    const auto relative =
+        std::filesystem::relative(
+            normalizedTemplate,
+            normalizedDirectory);
+
+    const auto firstComponent =
+        relative.empty()
+            ? std::filesystem::path{}
+            : *relative.begin();
+
+    if (relative.empty() ||
+        relative == std::filesystem::path(".") ||
+        relative.is_absolute() ||
+        firstComponent == std::filesystem::path("..")) {
+        throw std::invalid_argument(
+            "Selected template is outside the configured template directory.");
+    }
+
+    const std::filesystem::path destinationDirectory =
+        creo::ArchiCreoModelHandler::creoWorkingDirectory();
+
     const creo::ArchiCreoModelHandler assembly =
-        creo::ArchiCreoModelHandler::createAssembly(
+        creo::ArchiCreoModelHandler::createAssemblyFromTemplate(
+            normalizedTemplate,
+            destinationDirectory,
             modelNameWide);
 
     if (!assembly.isValid()) {
@@ -286,4 +360,5 @@ void createAssemblyFromJavaFx(
     }
 
     assembly.displayAndActivate();
+    assembly.refreshAfterCreation();
 }
