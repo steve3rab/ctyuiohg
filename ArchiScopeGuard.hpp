@@ -23,8 +23,14 @@ namespace creo {
         ArchiScopeGuard& operator=(ArchiScopeGuard&&) = delete;
 
         ~ArchiScopeGuard() noexcept {
-            if (active_) {
+            if (!active_) {
+                return;
+            }
+
+            try {
                 f_();
+            } catch (...) {
+                // Cleanup guards must never throw during stack unwinding.
             }
         }
 
