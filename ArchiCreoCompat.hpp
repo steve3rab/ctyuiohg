@@ -23,7 +23,6 @@ namespace creo::detail {
     using RawMdlFileType = ::ProMdlfileType;
     using RawObjectType = ::ProType;
     using RawSolid = ::ProSolid;
-    using RawRegenStatus = ::ProSolidRegenerationStatus;
 
     inline constexpr RawBoolean kBooleanFalse = PRO_B_FALSE;
     inline constexpr RawBoolean kBooleanTrue = PRO_B_TRUE;
