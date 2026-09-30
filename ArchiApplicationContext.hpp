@@ -86,6 +86,12 @@ public:
         return pendingActions_.erase(requestId) != 0;
     }
 
+    void clearPendingActions() noexcept
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        pendingActions_.clear();
+    }
+
 private:
     ArchiApplicationContext() :
         applicationHome_(
