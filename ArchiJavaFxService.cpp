@@ -11,7 +11,7 @@
 #include <stdexcept>
 #include <utility>
 
-#include "ArchiPropertyUtils.hpp"
+#include "ArchiApplicationContext.hpp"
 
 namespace {
     constexpr const char* jreHomeVariable = "Archi_JAVA_HOME";
@@ -24,7 +24,10 @@ namespace {
 }
 
 jnifx::ArchiJavaFxRuntime::Config ArchiJavaFxService::createConfig() {
-    const std::filesystem::path applicationHome = ArchiPropertyUtils::environmentPath(L"Archi_TOOLS");
+    const auto& applicationContext =
+        archi::ArchiApplicationContext::instance();
+    const std::filesystem::path& applicationHome =
+        applicationContext.applicationHome();
     const std::filesystem::path libs = applicationHome / "lib";
 
     jnifx::ArchiJavaFxRuntime::Config config;
@@ -81,6 +84,10 @@ bool ArchiJavaFxService::initialize() noexcept {
 
 void ArchiJavaFxService::destroy() noexcept {
     std::lock_guard lock(lifecycleMutex());
+
+    archi::ArchiApplicationContext::instance()
+        .clearPendingActions();
+
     activeInstanceStorage().reset();
 }
 

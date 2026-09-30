@@ -1,5 +1,6 @@
 #include "ArchiCreoCommands.hpp"
 
+#include "ArchiApplicationContext.hpp"
 #include "ArchiCreoModelHandler.hpp"
 #include "ArchiJavaFxService.hpp"
 #include "ArchiPropertyUtils.hpp"
@@ -10,27 +11,10 @@
 #include <filesystem>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
+#include <optional>
 #include <utility>
 
 namespace {
-
-enum class JavaFxAction {
-    CreatePart,
-    CreateAssembly
-};
-
-std::unordered_map<
-    ArchiJavaFxService::RequestId,
-    JavaFxAction> pendingActions;
-
-const std::filesystem::path& templateDirectory()
-{
-    static const std::filesystem::path directory =
-        ArchiPropertyUtils::environmentPath(
-            L"Archi_TOOLS") / "templates";
-    return directory;
-}
 
 std::string trim(std::string value)
 {
@@ -122,18 +106,17 @@ void configureJavaFxResultCallback()
     ArchiJavaFxService::instance().setResultCallback(
         [](jnifx::ArchiJavaFxRuntime::JavaFxResult result)
         {
-            const auto it =
-                pendingActions.find(result.requestId);
+            const auto action = archi::ArchiApplicationContext::instance()
+                .pendingAction(result.requestId);
 
-            if (it == pendingActions.end()) {
+            if (!action.has_value()) {
                 return;
             }
 
-            const JavaFxAction action = it->second;
-
             if (result.status !=
                 jnifx::ArchiJavaFxRuntime::JavaFxResult::Status::Accepted) {
-                pendingActions.erase(it);
+                archi::ArchiApplicationContext::instance()
+                    .removePendingAction(result.requestId);
                 return;
             }
 
@@ -144,8 +127,8 @@ void configureJavaFxResultCallback()
                 const std::string modelName =
                     getModelName(result);
 
-                switch (action) {
-                case JavaFxAction::CreatePart:
+                switch (*action) {
+                case archi::JavaFxAction::CreatePart:
                     createPartFromJavaFx(
                         modelName,
                         getTemplatePath(result),
@@ -153,7 +136,7 @@ void configureJavaFxResultCallback()
                     success = true;
                     break;
 
-                case JavaFxAction::CreateAssembly:
+                case archi::JavaFxAction::CreateAssembly:
                     createAssemblyFromJavaFx(
                         modelName,
                         getTemplatePath(result),
@@ -172,7 +155,8 @@ void configureJavaFxResultCallback()
             }
 
             if (success) {
-                pendingActions.erase(it);
+                archi::ArchiApplicationContext::instance()
+                    .removePendingAction(result.requestId);
             }
 
             ArchiJavaFxService::instance()
@@ -186,7 +170,7 @@ void configureJavaFxResultCallback()
 jnifx::ArchiJavaFxRuntime::RequestId onCreatePart()
 {
     const auto& templateDirectoryPath =
-        templateDirectory();
+        archi::ArchiApplicationContext::instance().templateDirectory();
 
     const std::string templateDirectoryUtf8 =
         ArchiPropertyUtils::wideStringToString(
@@ -202,9 +186,10 @@ jnifx::ArchiJavaFxRuntime::RequestId onCreatePart()
                 });
 
     if (requestId != 0) {
-        pendingActions.emplace(
-            requestId,
-            JavaFxAction::CreatePart);
+        archi::ArchiApplicationContext::instance()
+            .registerPendingAction(
+                requestId,
+                archi::JavaFxAction::CreatePart);
     }
 
     return requestId;
@@ -213,7 +198,7 @@ jnifx::ArchiJavaFxRuntime::RequestId onCreatePart()
 jnifx::ArchiJavaFxRuntime::RequestId onCreateAssembly()
 {
     const auto& templateDirectoryPath =
-        templateDirectory();
+        archi::ArchiApplicationContext::instance().templateDirectory();
 
     const std::string templateDirectoryUtf8 =
         ArchiPropertyUtils::wideStringToString(
@@ -229,9 +214,10 @@ jnifx::ArchiJavaFxRuntime::RequestId onCreateAssembly()
                 });
 
     if (requestId != 0) {
-        pendingActions.emplace(
-            requestId,
-            JavaFxAction::CreateAssembly);
+        archi::ArchiApplicationContext::instance()
+            .registerPendingAction(
+                requestId,
+                archi::JavaFxAction::CreateAssembly);
     }
 
     return requestId;
@@ -254,7 +240,7 @@ void createPartFromJavaFx(
                 templatePath));
 
     const auto& templateDirectoryPath =
-        templateDirectory();
+        archi::ArchiApplicationContext::instance().templateDirectory();
 
     const std::filesystem::path normalizedTemplate =
         std::filesystem::weakly_canonical(
@@ -281,6 +267,19 @@ void createPartFromJavaFx(
             "Selected template is outside the configured template directory.");
     }
 
+    std::optional<creo::ArchiCreoModelHandler> activeAssembly;
+
+    try {
+        const auto currentModel =
+            creo::ArchiCreoModelHandler::fromCurrentWindow();
+
+        if (currentModel.isAssembly()) {
+            activeAssembly = currentModel;
+        }
+    } catch (...) {
+        // No usable current assembly. The part will remain standalone.
+    }
+
     const std::filesystem::path destinationDirectory =
         creo::ArchiCreoModelHandler::creoWorkingDirectory();
 
@@ -290,11 +289,14 @@ void createPartFromJavaFx(
             destinationDirectory,
             modelNameWide);
 
-    // The template is loaded by Creo, copied under modelName,
-    // and the resulting model handle is returned.
     if (!part.isValid()) {
         throw std::runtime_error(
             "Creo created an invalid part handle.");
+    }
+
+    if (activeAssembly.has_value()) {
+        activeAssembly->assemblePart(part);
+        activeAssembly->refreshAfterCreation();
     }
 
     part.displayAndActivate();
@@ -318,7 +320,7 @@ void createAssemblyFromJavaFx(
                 templatePath));
 
     const auto& templateDirectoryPath =
-        templateDirectory();
+        archi::ArchiApplicationContext::instance().templateDirectory();
 
     const std::filesystem::path normalizedTemplate =
         std::filesystem::weakly_canonical(
