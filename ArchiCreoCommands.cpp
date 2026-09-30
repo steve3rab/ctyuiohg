@@ -12,13 +12,11 @@
 #include <stdexcept>
 #include <string>
 #include <optional>
-#include <unordered_map>
 #include <utility>
 
 namespace {
 
 std::string trim(std::string value)
-(std::string value)
 {
     const auto isSpace = [](unsigned char character) {
         return std::isspace(character) != 0;
