@@ -1,5 +1,6 @@
 #include "ArchiCreoCommands.hpp"
 
+#include "ArchiApplicationContext.hpp"
 #include "ArchiCreoModelHandler.hpp"
 #include "ArchiJavaFxService.hpp"
 #include "ArchiPropertyUtils.hpp"
@@ -16,24 +17,8 @@
 
 namespace {
 
-enum class JavaFxAction {
-    CreatePart,
-    CreateAssembly
-};
-
-std::unordered_map<
-    ArchiJavaFxService::RequestId,
-    JavaFxAction> pendingActions;
-
-const std::filesystem::path& templateDirectory()
-{
-    static const std::filesystem::path directory =
-        ArchiPropertyUtils::environmentPath(
-            L"Archi_TOOLS") / "templates";
-    return directory;
-}
-
 std::string trim(std::string value)
+(std::string value)
 {
     const auto isSpace = [](unsigned char character) {
         return std::isspace(character) != 0;
@@ -123,18 +108,17 @@ void configureJavaFxResultCallback()
     ArchiJavaFxService::instance().setResultCallback(
         [](jnifx::ArchiJavaFxRuntime::JavaFxResult result)
         {
-            const auto it =
-                pendingActions.find(result.requestId);
+            const auto action = archi::ArchiApplicationContext::instance()
+                .pendingAction(result.requestId);
 
-            if (it == pendingActions.end()) {
+            if (!action.has_value()) {
                 return;
             }
 
-            const JavaFxAction action = it->second;
-
             if (result.status !=
                 jnifx::ArchiJavaFxRuntime::JavaFxResult::Status::Accepted) {
-                pendingActions.erase(it);
+                archi::ArchiApplicationContext::instance()
+                    .removePendingAction(result.requestId);
                 return;
             }
 
@@ -145,8 +129,8 @@ void configureJavaFxResultCallback()
                 const std::string modelName =
                     getModelName(result);
 
-                switch (action) {
-                case JavaFxAction::CreatePart:
+                switch (*action) {
+                case archi::JavaFxAction::CreatePart:
                     createPartFromJavaFx(
                         modelName,
                         getTemplatePath(result),
@@ -154,7 +138,7 @@ void configureJavaFxResultCallback()
                     success = true;
                     break;
 
-                case JavaFxAction::CreateAssembly:
+                case archi::JavaFxAction::CreateAssembly:
                     createAssemblyFromJavaFx(
                         modelName,
                         getTemplatePath(result),
@@ -173,7 +157,8 @@ void configureJavaFxResultCallback()
             }
 
             if (success) {
-                pendingActions.erase(it);
+                archi::ArchiApplicationContext::instance()
+                    .removePendingAction(result.requestId);
             }
 
             ArchiJavaFxService::instance()
@@ -187,7 +172,7 @@ void configureJavaFxResultCallback()
 jnifx::ArchiJavaFxRuntime::RequestId onCreatePart()
 {
     const auto& templateDirectoryPath =
-        templateDirectory();
+        archi::ArchiApplicationContext::instance().templateDirectory();
 
     const std::string templateDirectoryUtf8 =
         ArchiPropertyUtils::wideStringToString(
@@ -203,9 +188,10 @@ jnifx::ArchiJavaFxRuntime::RequestId onCreatePart()
                 });
 
     if (requestId != 0) {
-        pendingActions.emplace(
-            requestId,
-            JavaFxAction::CreatePart);
+        archi::ArchiApplicationContext::instance()
+            .registerPendingAction(
+                requestId,
+                archi::JavaFxAction::CreatePart);
     }
 
     return requestId;
@@ -214,7 +200,7 @@ jnifx::ArchiJavaFxRuntime::RequestId onCreatePart()
 jnifx::ArchiJavaFxRuntime::RequestId onCreateAssembly()
 {
     const auto& templateDirectoryPath =
-        templateDirectory();
+        archi::ArchiApplicationContext::instance().templateDirectory();
 
     const std::string templateDirectoryUtf8 =
         ArchiPropertyUtils::wideStringToString(
@@ -230,9 +216,10 @@ jnifx::ArchiJavaFxRuntime::RequestId onCreateAssembly()
                 });
 
     if (requestId != 0) {
-        pendingActions.emplace(
-            requestId,
-            JavaFxAction::CreateAssembly);
+        archi::ArchiApplicationContext::instance()
+            .registerPendingAction(
+                requestId,
+                archi::JavaFxAction::CreateAssembly);
     }
 
     return requestId;
@@ -255,7 +242,7 @@ void createPartFromJavaFx(
                 templatePath));
 
     const auto& templateDirectoryPath =
-        templateDirectory();
+        archi::ArchiApplicationContext::instance().templateDirectory();
 
     const std::filesystem::path normalizedTemplate =
         std::filesystem::weakly_canonical(
@@ -335,7 +322,7 @@ void createAssemblyFromJavaFx(
                 templatePath));
 
     const auto& templateDirectoryPath =
-        templateDirectory();
+        archi::ArchiApplicationContext::instance().templateDirectory();
 
     const std::filesystem::path normalizedTemplate =
         std::filesystem::weakly_canonical(
