@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <utility>
 
+#include "ArchiApplicationContext.hpp"
 #include "ArchiPropertyUtils.hpp"
 
 namespace {
@@ -81,6 +82,10 @@ bool ArchiJavaFxService::initialize() noexcept {
 
 void ArchiJavaFxService::destroy() noexcept {
     std::lock_guard lock(lifecycleMutex());
+
+    archi::ArchiApplicationContext::instance()
+        .clearPendingActions();
+
     activeInstanceStorage().reset();
 }
 
