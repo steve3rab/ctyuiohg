@@ -39,7 +39,7 @@ public:
     ArchiApplicationContext(ArchiApplicationContext&&) = delete;
     ArchiApplicationContext& operator=(ArchiApplicationContext&&) = delete;
 
-    static ArchiApplicationContext& instance() noexcept
+    static ArchiApplicationContext& instance()
     {
         static ArchiApplicationContext context;
         return context;
