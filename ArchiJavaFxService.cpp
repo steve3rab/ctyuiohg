@@ -12,7 +12,6 @@
 #include <utility>
 
 #include "ArchiApplicationContext.hpp"
-#include "ArchiPropertyUtils.hpp"
 
 namespace {
     constexpr const char* jreHomeVariable = "Archi_JAVA_HOME";
