@@ -25,7 +25,10 @@ namespace {
 }
 
 jnifx::ArchiJavaFxRuntime::Config ArchiJavaFxService::createConfig() {
-    const std::filesystem::path applicationHome = ArchiPropertyUtils::environmentPath(L"Archi_TOOLS");
+    const auto& applicationContext =
+        archi::ArchiApplicationContext::instance();
+    const std::filesystem::path& applicationHome =
+        applicationContext.applicationHome();
     const std::filesystem::path libs = applicationHome / "lib";
 
     jnifx::ArchiJavaFxRuntime::Config config;
