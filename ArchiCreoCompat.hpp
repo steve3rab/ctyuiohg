@@ -7,6 +7,7 @@
 #include <ProCore.h>
 #include <ProMdl.h>
 #include <ProModelitem.h>
+#include <ProParameter.h>
 #include <ProSolid.h>
 #include <ProToolkit.h>
 #include <ProUtil.h>
@@ -20,6 +21,10 @@ namespace creo::detail {
     using RawArray = ::ProArray;
     using RawBoolean = ::ProBoolean;
     using RawModelItem = ::ProModelitem;
+    using RawParameter = ::ProParameter;
+    using RawParamValue = ::ProParamvalue;
+    using RawParamValueType = ::ProParamvalueType;
+    using RawLockStatus = ::ProLockstatus;
     using RawMdlType = ::ProMdlType;
     using RawMdlName = ::ProMdlName;
     using RawMdlFileType = ::ProMdlfileType;
@@ -62,6 +67,49 @@ namespace creo::detail {
         RawMdl model,
         wchar_t* name_out) {
         return ::ProMdlMdlnameGet(model, name_out);
+    }
+
+    inline ProErrorCode mdlToModelitem(
+        RawMdl model,
+        RawModelItem* p_item) {
+        return ::ProMdlToModelitem(model, p_item);
+    }
+
+    inline ProErrorCode parameterInit(
+        RawModelItem* owner,
+        RawMdlName name,
+        RawParameter* p_param) {
+        return ::ProParameterInit(owner, name, p_param);
+    }
+
+    inline ProErrorCode parameterCreate(
+        RawModelItem* owner,
+        RawMdlName name,
+        RawParamValue* value,
+        RawParameter* p_param) {
+        return ::ProParameterCreate(owner, name, value, p_param);
+    }
+
+    inline ProErrorCode parameterValueGet(
+        RawParameter* param,
+        RawParamValue* p_value) {
+        return ::ProParameterValueGet(param, p_value);
+    }
+
+    inline ProErrorCode parameterValueSet(
+        RawParameter* param,
+        RawParamValue* value) {
+        return ::ProParameterValueSet(param, value);
+    }
+
+    inline ProErrorCode parameterDelete(RawParameter* param) {
+        return ::ProParameterDelete(param);
+    }
+
+    inline ProErrorCode parameterLockstatusGet(
+        RawParameter* param,
+        RawLockStatus* p_status) {
+        return ::ProParameterLockstatusGet(param, p_status);
     }
 
     inline ProErrorCode mdlCurrentGet(RawMdl* p_mdl) {
