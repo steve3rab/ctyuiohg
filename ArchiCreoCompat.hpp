@@ -27,6 +27,7 @@ namespace creo::detail {
     using RawLockStatus = ::ProLockstatus;
     using RawMdlType = ::ProMdlType;
     using RawMdlName = ::ProMdlName;
+    using RawName = ::ProName;
     using RawMdlFileType = ::ProMdlfileType;
     using RawObjectType = ::ProType;
     using RawSolid = ::ProSolid;
@@ -75,31 +76,54 @@ namespace creo::detail {
         return ::ProMdlToModelitem(model, p_item);
     }
 
+    inline ProErrorCode paramvalueSet(
+        RawParamValue* p_handle,
+        const void* value,
+        RawParamValueType type) {
+        return ::ProParamvalueSet(p_handle, value, type);
+    }
+
+    inline ProErrorCode paramvalueValueGet(
+        const RawParamValue* p_handle,
+        RawParamValueType type,
+        void* p_value) {
+        return ::ProParamvalueValueGet(p_handle, type, p_value);
+    }
+
+    inline ProErrorCode paramvalueTypeGet(
+        const RawParamValue* p_handle,
+        RawParamValueType* p_type) {
+        return ::ProParamvalueTypeGet(p_handle, p_type);
+    }
+
     inline ProErrorCode parameterInit(
         RawModelItem* owner,
-        RawMdlName name,
+        RawName name,
         RawParameter* p_param) {
         return ::ProParameterInit(owner, name, p_param);
     }
 
     inline ProErrorCode parameterCreate(
         RawModelItem* owner,
-        RawMdlName name,
+        RawName name,
         RawParamValue* value,
         RawParameter* p_param) {
-        return ::ProParameterCreate(owner, name, value, p_param);
+        return ::ProParameterWithUnitsCreate(
+            owner, name, value, nullptr, p_param);
     }
 
     inline ProErrorCode parameterValueGet(
         RawParameter* param,
         RawParamValue* p_value) {
-        return ::ProParameterValueGet(param, p_value);
+        return ::ProParameterValueWithUnitsGet(
+            param, p_value, nullptr);
     }
 
     inline ProErrorCode parameterValueSet(
         RawParameter* param,
         RawParamValue* value) {
-        return ::ProParameterValueSet(param, value);
+        return ::ProParameterValueWithUnitsSet(
+            param, value, nullptr);
     }
 
     inline ProErrorCode parameterDelete(RawParameter* param) {
