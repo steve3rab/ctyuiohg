@@ -87,8 +87,10 @@ namespace creo {
                 detail::tableDataAlloc(&data));
 
             auto freeData = Defer([&] {
-                CREO_CHECK(
-                    detail::tableDataFree(&data));
+                if (data != nullptr) {
+                    CREO_CHECK(
+                        detail::tableDataRelease(&data));
+                }
             });
 
             CREO_CHECK(
@@ -283,19 +285,6 @@ namespace creo {
                     endColumn,
                     endRow,
                     display ? PRO_B_TRUE : PRO_B_FALSE));
-        }
-
-        void wrapCell(
-            int column,
-            int row) const {
-
-            requireCell(column, row);
-
-            CREO_CHECK(
-                detail::tableCellTextWrap(
-                    &table_,
-                    row,
-                    column));
         }
 
         void addRow(
@@ -510,16 +499,17 @@ namespace creo {
                         &textLines));
             });
 
-            for (std::size_t index = 0;
-                 index < lines.size();
-                 ++index) {
+            std::vector<std::vector<wchar_t>> buffers;
+            buffers.reserve(lines.size());
 
-                std::vector<wchar_t> buffer(
-                    lines[index].begin(),
-                    lines[index].end());
+            for (const std::wstring& line : lines) {
+                buffers.emplace_back(
+                    line.begin(),
+                    line.end());
 
-                buffer.push_back(L'\\0');
-                textLines[index] = buffer.data();
+                buffers.back().push_back(L'\\0');
+                textLines[buffers.size() - 1] =
+                    buffers.back().data();
             }
 
             CREO_CHECK(
