@@ -9,6 +9,7 @@
 #include <ProModelitem.h>
 #include <ProParameter.h>
 #include <ProSolid.h>
+#include <ProTable.h>
 #include <ProToolkit.h>
 #include <ProUtil.h>
 #include <ProWindows.h>
@@ -36,6 +37,9 @@ namespace creo::detail {
     using RawMatrix = ::ProMatrix;
     using RawVector = ::ProVector;
     using RawPoint3d = ::ProPoint3d;
+    using RawTable = ::ProTable;
+    using RawTableData = ::ProTableData;
+    using RawWstringProArray = ::ProWstring*;
 
     inline constexpr RawBoolean kBooleanFalse = PRO_B_FALSE;
     inline constexpr RawBoolean kBooleanTrue = PRO_B_TRUE;
@@ -378,6 +382,96 @@ namespace creo::detail {
     inline ProErrorCode directoryCurrentGet(
         RawPath path) {
         return ::ProDirectoryCurrentGet(path);
+    }
+
+
+    inline ProErrorCode tableDataAlloc(RawTableData* p_data) {
+        return ::ProTableDataAlloc(p_data);
+    }
+
+    inline ProErrorCode tableDataFree(RawTableData* p_data) {
+        return ::ProTableDataFree(p_data);
+    }
+
+    inline ProErrorCode tableDataOriginSet(RawTableData data, RawPoint3d origin) {
+        return ::ProTableDataOriginSet(data, origin);
+    }
+
+    inline ProErrorCode tableDataSizetypeSet(RawTableData data, ProTableSizetype type) {
+        return ::ProTableDataSizetypeSet(data, type);
+    }
+
+    inline ProErrorCode tableDataRowsSet(RawTableData data, int rows, double* heights) {
+        return ::ProTableDataRowsSet(data, rows, heights);
+    }
+
+    inline ProErrorCode tableDataColumnsSet(
+        RawTableData data, int columns, double* widths, ProHorzJust* justifications) {
+        return ::ProTableDataColumnsSet(data, columns, widths, justifications);
+    }
+
+    inline ProErrorCode tableCreate(
+        RawMdl model, RawTableData data, RawBoolean display, RawTable* p_table) {
+        return ::ProTableCreate(model, data, display, p_table);
+    }
+
+    inline ProErrorCode tableRowsColumnsCount(
+        RawTable* table, int* rows, int* columns) {
+        return ::ProTableRowsColumnsCount(table, rows, columns);
+    }
+
+    inline ProErrorCode tableColumnWidthSet(
+        RawTable* table, int column, double width, ProBoolean characters) {
+        return ::ProTableColumnWidthSet(table, column, width, characters);
+    }
+
+    inline ProErrorCode tableColumnWidthGet(
+        RawTable* table, int column, ProBoolean characters, double* width) {
+        return ::ProTableColumnWidthGet(table, column, characters, width);
+    }
+
+    inline ProErrorCode tableCellTextWrap(
+        RawTable* table, int row, int column) {
+        return ::ProTableCelltextWrap(table, row, column);
+    }
+
+    inline ProErrorCode tableRowHeightAutoAdjustSet(
+        RawTable* table, int row, ProTblRowheightAutoAdjust value) {
+        return ::ProTableRowheightAutoadjustSet(table, row, value);
+    }
+
+    inline ProErrorCode tableRowAdd(
+        RawTable* table, int insert_after_row, RawBoolean display, double height) {
+        return ::ProTableRowAdd(table, insert_after_row, display, height);
+    }
+
+    inline ProErrorCode tableColumnAdd(
+        RawTable* table, int insert_after_column, RawBoolean display, double width) {
+        return ::ProTableColumnAdd(table, insert_after_column, display, width);
+    }
+
+    inline ProErrorCode tableRowDelete(
+        RawTable* table, int row, RawBoolean display) {
+        return ::ProTableRowDelete(table, row, display);
+    }
+
+    inline ProErrorCode tableColumnDelete(
+        RawTable* table, int column, RawBoolean display) {
+        return ::ProTableColumnDelete(table, column, display);
+    }
+
+    inline ProErrorCode wstringProArrayAlloc(RawWstringProArray* p_array) {
+        return ::ProArrayAlloc(1, sizeof(ProWstring), 1,
+            reinterpret_cast<ProArray*>(p_array));
+    }
+
+    inline ProErrorCode wstringProArrayFree(RawWstringProArray* p_array) {
+        return ::ProArrayFree(reinterpret_cast<ProArray*>(p_array));
+    }
+
+    inline ProErrorCode tableTextEnter(
+        RawTable* table, int column, int row, RawWstringProArray text) {
+        return ::ProTableTextEnter(table, column, row, text);
     }
 
     inline ProErrorCode engineerConnectIdGet(
