@@ -416,7 +416,7 @@ namespace creo {
                     origin,
                     position));
 
-            detail::RawAsmcomp component = nullptr;
+            detail::RawAsmcomp component{};
 
             CREO_CHECK(
                 detail::asmcompAssemble(
@@ -427,11 +427,6 @@ namespace creo {
                     position,
                     &component));
 
-            if (component == nullptr) {
-                throw std::runtime_error(
-                    "ArchiCreoModelHandler::assemblePart: "
-                    "Creo returned a null assembly component handle");
-            }
         }
 
         void refreshAfterCreation() const {
