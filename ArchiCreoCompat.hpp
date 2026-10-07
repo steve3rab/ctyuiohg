@@ -511,9 +511,11 @@ namespace creo::detail {
         return ::ProTableColumnDelete(table, column, display);
     }
 
-    inline ProErrorCode wstringProArrayAlloc(RawWstringProArray* p_array) {
+    inline ProErrorCode wstringProArrayAlloc(
+        int count,
+        RawWstringProArray* p_array) {
         return ::ProArrayAlloc(
-            1,
+            count,
             sizeof(ProWstring),
             1,
             reinterpret_cast<ProArray*>(p_array));
