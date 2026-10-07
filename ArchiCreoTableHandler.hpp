@@ -270,6 +270,33 @@ namespace creo {
                     PROTABLESIZE_CHARS_TRUE));
         }
 
+        void mergeCells(
+            int startColumn,
+            int startRow,
+            int endColumn,
+            int endRow,
+            bool display = true) const {
+
+            requireCell(startColumn, startRow);
+            requireCell(endColumn, endRow);
+
+            if (startColumn > endColumn ||
+                startRow > endRow) {
+                throw std::invalid_argument(
+                    "ArchiCreoTableHandler::mergeCells: "
+                    "invalid cell range");
+            }
+
+            CREO_CHECK(
+                detail::tableCellsMerge(
+                    &table_,
+                    startColumn,
+                    startRow,
+                    endColumn,
+                    endRow,
+                    display ? PRO_B_TRUE : PRO_B_FALSE));
+        }
+
         void wrapCell(
             int column,
             int row) const {
