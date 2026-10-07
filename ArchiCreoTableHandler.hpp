@@ -317,8 +317,7 @@ namespace creo {
 
             requireTable();
 
-            if (insertAfterRow < -1 ||
-                insertAfterRow >= rowCount()) {
+            if (insertAfterRow > rowCount()) {
                 throw std::out_of_range(
                     "ArchiCreoTableHandler::addRow: "
                     "row index out of range");
@@ -339,8 +338,7 @@ namespace creo {
 
             requireTable();
 
-            if (insertAfterColumn < -1 ||
-                insertAfterColumn >= columnCount()) {
+            if (insertAfterColumn > columnCount()) {
                 throw std::out_of_range(
                     "ArchiCreoTableHandler::addColumn: "
                     "column index out of range");
