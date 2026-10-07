@@ -204,10 +204,9 @@ namespace creo {
                             static_cast<std::size_t>(0),
                             static_cast<std::size_t>(kMaxColumnWidth)));
 
-                requiredWidths[columnIndex] =
-                    std::max(
-                        requiredWidths[columnIndex],
-                        requiredWidth);
+                if (requiredWidth > requiredWidths[columnIndex]) {
+                    requiredWidths[columnIndex] = requiredWidth;
+                }
             }
 
             for (int column = 1;
