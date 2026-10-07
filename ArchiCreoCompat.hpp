@@ -421,13 +421,19 @@ namespace creo::detail {
     }
 
     inline ProErrorCode tableColumnWidthSet(
-        RawTable* table, int column, double width, ProBoolean characters) {
-        return ::ProTableColumnWidthSet(table, column, width, characters);
+        RawTable* table,
+        int column,
+        double width,
+        ProTableSizetype size_type) {
+        return ::ProTableColumnWidthSet(table, column, width, size_type);
     }
 
     inline ProErrorCode tableColumnWidthGet(
-        RawTable* table, int column, ProBoolean characters, double* width) {
-        return ::ProTableColumnWidthGet(table, column, characters, width);
+        RawTable* table,
+        int column,
+        ProTableSizetype size_type,
+        double* width) {
+        return ::ProTableColumnWidthGet(table, column, size_type, width);
     }
 
     inline ProErrorCode tableCellsMerge(
@@ -515,7 +521,10 @@ namespace creo::detail {
     }
 
     inline ProErrorCode wstringProArrayAlloc(RawWstringProArray* p_array) {
-        return ::ProArrayAlloc(1, sizeof(ProWstring), 1,
+        return ::ProArrayAlloc(
+            1,
+            sizeof(ProWstring),
+            1,
             reinterpret_cast<ProArray*>(p_array));
     }
 
