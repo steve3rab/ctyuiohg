@@ -9,7 +9,13 @@
 #include <ProModelitem.h>
 #include <ProParameter.h>
 #include <ProSolid.h>
+#if defined(CREO10)
+#include <ProDwgtable.h>
+#elif defined(CREO13)
 #include <ProTable.h>
+#else
+#error "Define CREO10 or CREO13 when building ArchiCreo"
+#endif
 #include <ProToolkit.h>
 #include <ProUtil.h>
 #include <ProWindows.h>
@@ -37,9 +43,38 @@ namespace creo::detail {
     using RawMatrix = ::ProMatrix;
     using RawVector = ::ProVector;
     using RawPoint3d = ::ProPoint3d;
+#if defined(CREO10)
+    using RawTable = ::ProDwgtable;
+    using RawTableData = ::ProDwgtabledata;
+    using RawTableSizeType = ::ProDwgtableSizetype;
+    using RawTableRowHeightAutoadjustType = ::ProDwgtableRowheightAutoadjusttype;
+    using RawTableParamMode = ::ProParamMode;
+#elif defined(CREO13)
     using RawTable = ::ProTable;
     using RawTableData = ::ProTableData;
+    using RawTableSizeType = ::ProTableSizetype;
+    using RawTableRowHeightAutoadjustType = ::ProTableRowheightAutoadjusttype;
+    using RawTableParamMode = ::ProTableParamMode;
+#endif
     using RawWstringProArray = ::ProWstring*;
+
+#if defined(CREO10)
+    inline constexpr RawTableSizeType kTableSizeCharacters =
+        PRODWGTABLESIZE_CHARACTERS;
+    inline constexpr RawTableSizeType kTableSizeCharsTrue =
+        PRODWGTABLESIZE_CHARS_TRUE;
+    inline constexpr RawTableRowHeightAutoadjustType
+        kTableRowHeightAutoAdjustTrue =
+            PRODWGTBLROWHEIGHT_AUTOADJUST_TRUE;
+#elif defined(CREO13)
+    inline constexpr RawTableSizeType kTableSizeCharacters =
+        PROTABLESIZE_CHARACTERS;
+    inline constexpr RawTableSizeType kTableSizeCharsTrue =
+        PROTABLESIZE_CHARS_TRUE;
+    inline constexpr RawTableRowHeightAutoadjustType
+        kTableRowHeightAutoAdjustTrue =
+            PROTBLROWHEIGHT_AUTOADJUST_TRUE;
+#endif
 
     inline constexpr RawBoolean kBooleanFalse = PRO_B_FALSE;
     inline constexpr RawBoolean kBooleanTrue = PRO_B_TRUE;
@@ -385,51 +420,259 @@ namespace creo::detail {
     }
 
 
+#if defined(CREO10)
+
     inline ProErrorCode tableDataAlloc(RawTableData* p_data) {
-        return ::ProTableDataAlloc(p_data);
+        return ::ProDwgtabledataAlloc(p_data);
     }
 
-    inline ProErrorCode tableDataOriginSet(RawTableData data, RawPoint3d origin) {
-        return ::ProTableDataOriginSet(data, origin);
+    inline ProErrorCode tableDataRelease(RawTableData* p_data) {
+        return ::ProDwgtabledataFree(p_data);
     }
 
-    inline ProErrorCode tableDataSizetypeSet(RawTableData data, ProTableSizetype type) {
-        return ::ProTableDataSizetypeSet(data, type);
+    inline ProErrorCode tableDataOriginSet(
+        RawTableData data, RawPoint3d origin) {
+        return ::ProDwgtabledataOriginSet(data, origin);
     }
 
-    inline ProErrorCode tableDataRowsSet(RawTableData data, int rows, double* heights) {
-        return ::ProTableDataRowsSet(data, rows, heights);
+    inline ProErrorCode tableDataSizetypeSet(
+        RawTableData data, RawTableSizeType type) {
+        return ::ProDwgtabledataSizetypeSet(data, type);
+    }
+
+    inline ProErrorCode tableDataRowsSet(
+        RawTableData data, int rows, double* heights) {
+        return ::ProDwgtabledataRowsSet(data, rows, heights);
     }
 
     inline ProErrorCode tableDataColumnsSet(
-        RawTableData data, int columns, double* widths, ProHorzJust* justifications) {
-        return ::ProTableDataColumnsSet(data, columns, widths, justifications);
+        RawTableData data,
+        int columns,
+        double* widths,
+        ProHorzJust* justifications) {
+        return ::ProDwgtabledataColumnsSet(
+            data, columns, widths, justifications);
     }
 
     inline ProErrorCode tableCreate(
-        RawMdl model, RawTableData data, RawBoolean display, RawTable* p_table) {
-        return ::ProTableCreate(model, data, display, p_table);
+        RawMdl model,
+        RawTableData data,
+        RawBoolean display,
+        RawTable* p_table) {
+        return ::ProDrawingTableCreate(
+            reinterpret_cast<ProDrawing>(model),
+            data,
+            display,
+            p_table);
     }
 
     inline ProErrorCode tableRowsColumnsCount(
         RawTable* table, int* rows, int* columns) {
-        return ::ProTableRowsColumnsCount(table, rows, columns);
+        ProErrorCode status = ::ProDwgtableRowsCount(table, rows);
+        if (status != kNoError) {
+            return status;
+        }
+
+        return ::ProDwgtableColumnsCount(table, columns);
     }
 
     inline ProErrorCode tableColumnWidthSet(
         RawTable* table,
         int column,
         double width,
-        ProTableSizetype size_type) {
-        return ::ProTableColumnWidthSet(table, column, width, size_type);
+        RawTableSizeType size_type) {
+        return ::ProDwgtableColumnWidthSet(
+            table, column, width, size_type);
     }
 
     inline ProErrorCode tableColumnWidthGet(
         RawTable* table,
         int column,
-        ProTableSizetype size_type,
+        RawTableSizeType,
         double* width) {
-        return ::ProTableColumnWidthGet(table, column, size_type, width);
+        if (table == nullptr || width == nullptr) {
+            return PRO_TK_BAD_INPUTS;
+        }
+
+        ProDwgtableInfo info{};
+        ProErrorCode status = ::ProDwgtableInfoGet(
+            table, PRO_VALUE_UNUSED, &info);
+        if (status != kNoError) {
+            return status;
+        }
+
+        if (info.char_width <= 0.0) {
+            return PRO_TK_GENERAL_ERROR;
+        }
+
+        double world_width = 0.0;
+        status = ::ProDwgtableColumnSizeGet(
+            table, PRO_VALUE_UNUSED, column - 1, &world_width);
+        if (status != kNoError) {
+            return status;
+        }
+
+        *width = world_width / info.char_width;
+        return kNoError;
+    }
+
+    inline ProErrorCode tableCellsMerge(
+        RawTable* table,
+        int start_column,
+        int start_row,
+        int end_column,
+        int end_row,
+        RawBoolean display) {
+        return ::ProDwgtableCellsMerge(
+            table,
+            start_column,
+            start_row,
+            end_column,
+            end_row,
+            display);
+    }
+
+    inline ProErrorCode tableCellsRemesh(
+        RawTable* table,
+        int start_column,
+        int start_row,
+        int end_column,
+        int end_row,
+        RawBoolean display) {
+        return ::ProDwgtableCellsRemesh(
+            table,
+            start_column,
+            start_row,
+            end_column,
+            end_row,
+            display);
+    }
+
+    inline ProErrorCode tableRowHeightAutoAdjustSet(
+        RawTable* table,
+        int row,
+        RawTableRowHeightAutoadjustType value) {
+        return ::ProDwgtableRowheightAutoadjustSet(
+            table, row, value);
+    }
+
+    inline ProErrorCode tableRowAdd(
+        RawTable* table,
+        int insert_after_row,
+        RawBoolean display,
+        double height) {
+        return ::ProDwgtableRowAdd(
+            table, insert_after_row, display, height);
+    }
+
+    inline ProErrorCode tableColumnAdd(
+        RawTable* table,
+        int insert_after_column,
+        RawBoolean display,
+        double width) {
+        return ::ProDwgtableColumnAdd(
+            table, insert_after_column, display, width);
+    }
+
+    inline ProErrorCode tableRowDelete(
+        RawTable* table, int row, RawBoolean display) {
+        return ::ProDwgtableRowDelete(table, row, display);
+    }
+
+    inline ProErrorCode tableColumnDelete(
+        RawTable* table, int column, RawBoolean display) {
+        return ::ProDwgtableColumnDelete(table, column, display);
+    }
+
+    inline ProErrorCode tableCellTextWrap(
+        RawTable* table, int row, int column) {
+        return ::ProDwgtableCelltextWrap(table, row, column);
+    }
+
+    inline ProErrorCode tableTextEnter(
+        RawTable* table,
+        int column,
+        int row,
+        RawWstringProArray text) {
+        return ::ProDwgtableTextEnter(
+            table, column, row, text);
+    }
+
+    inline ProErrorCode tableCellTextGet(
+        RawTable* table,
+        int column,
+        int row,
+        RawTableParamMode mode,
+        RawWstringProArray* p_lines) {
+        return ::ProDwgtableCelltextGet(
+            table, column, row, mode, p_lines);
+    }
+
+#elif defined(CREO13)
+
+    inline ProErrorCode tableDataAlloc(RawTableData* p_data) {
+        return ::ProTableDataAlloc(p_data);
+    }
+
+    inline ProErrorCode tableDataRelease(RawTableData* p_data) {
+        return ::ProTableDataFree(p_data);
+    }
+
+    inline ProErrorCode tableDataOriginSet(
+        RawTableData data, RawPoint3d origin) {
+        return ::ProTableDataOriginSet(data, origin);
+    }
+
+    inline ProErrorCode tableDataSizetypeSet(
+        RawTableData data, RawTableSizeType type) {
+        return ::ProTableDataSizetypeSet(data, type);
+    }
+
+    inline ProErrorCode tableDataRowsSet(
+        RawTableData data, int rows, double* heights) {
+        return ::ProTableDataRowsSet(data, rows, heights);
+    }
+
+    inline ProErrorCode tableDataColumnsSet(
+        RawTableData data,
+        int columns,
+        double* widths,
+        ProHorzJust* justifications) {
+        return ::ProTableDataColumnsSet(
+            data, columns, widths, justifications);
+    }
+
+    inline ProErrorCode tableCreate(
+        RawMdl model,
+        RawTableData data,
+        RawBoolean display,
+        RawTable* p_table) {
+        return ::ProTableCreate(
+            model, data, display, p_table);
+    }
+
+    inline ProErrorCode tableRowsColumnsCount(
+        RawTable* table, int* rows, int* columns) {
+        return ::ProTableRowsColumnsCount(
+            table, rows, columns);
+    }
+
+    inline ProErrorCode tableColumnWidthSet(
+        RawTable* table,
+        int column,
+        double width,
+        RawTableSizeType size_type) {
+        return ::ProTableColumnWidthSet(
+            table, column, width, size_type);
+    }
+
+    inline ProErrorCode tableColumnWidthGet(
+        RawTable* table,
+        int column,
+        RawTableSizeType size_type,
+        double* width) {
+        return ::ProTableColumnWidthGet(
+            table, column, size_type, width);
     }
 
     inline ProErrorCode tableCellsMerge(
@@ -458,14 +701,8 @@ namespace creo::detail {
         int* end_row,
         int* end_column) {
         return ::ProTableCellMergeGet(
-            table,
-            row,
-            column,
-            is_merge,
-            start_row,
-            start_column,
-            end_row,
-            end_column);
+            table, row, column, is_merge,
+            start_row, start_column, end_row, end_column);
     }
 
     inline ProErrorCode tableCellsRemesh(
@@ -487,18 +724,27 @@ namespace creo::detail {
     inline ProErrorCode tableRowHeightAutoAdjustSet(
         RawTable* table,
         int row,
-        ProTableRowheightAutoadjusttype value) {
-        return ::ProTableRowheightAutoadjustSet(table, row, value);
+        RawTableRowHeightAutoadjustType value) {
+        return ::ProTableRowheightAutoadjustSet(
+            table, row, value);
     }
 
     inline ProErrorCode tableRowAdd(
-        RawTable* table, int insert_after_row, RawBoolean display, double height) {
-        return ::ProTableRowAdd(table, insert_after_row, display, height);
+        RawTable* table,
+        int insert_after_row,
+        RawBoolean display,
+        double height) {
+        return ::ProTableRowAdd(
+            table, insert_after_row, display, height);
     }
 
     inline ProErrorCode tableColumnAdd(
-        RawTable* table, int insert_after_column, RawBoolean display, double width) {
-        return ::ProTableColumnAdd(table, insert_after_column, display, width);
+        RawTable* table,
+        int insert_after_column,
+        RawBoolean display,
+        double width) {
+        return ::ProTableColumnAdd(
+            table, insert_after_column, display, width);
     }
 
     inline ProErrorCode tableRowDelete(
@@ -511,6 +757,27 @@ namespace creo::detail {
         return ::ProTableColumnDelete(table, column, display);
     }
 
+    inline ProErrorCode tableTextEnter(
+        RawTable* table,
+        int column,
+        int row,
+        RawWstringProArray text) {
+        return ::ProTableTextEnter(
+            table, column, row, text);
+    }
+
+    inline ProErrorCode tableCellTextGet(
+        RawTable* table,
+        int column,
+        int row,
+        RawTableParamMode mode,
+        RawWstringProArray* p_lines) {
+        return ::ProTableCelltextGet(
+            table, column, row, mode, p_lines);
+    }
+
+#endif
+
     inline ProErrorCode wstringProArrayAlloc(
         int count,
         RawWstringProArray* p_array) {
@@ -521,27 +788,9 @@ namespace creo::detail {
             reinterpret_cast<ProArray*>(p_array));
     }
 
-    inline ProErrorCode wstringProArrayFree(RawWstringProArray* p_array) {
+    inline ProErrorCode wstringProArrayFree(
+        RawWstringProArray* p_array) {
         return ::ProWstringproarrayFree(p_array);
-    }
-
-    inline ProErrorCode tableCellTextGet(
-        RawTable* table,
-        int column,
-        int row,
-        ProTableParamMode mode,
-        RawWstringProArray* p_lines) {
-        return ::ProTableCelltextGet(
-            table,
-            column,
-            row,
-            mode,
-            p_lines);
-    }
-
-    inline ProErrorCode tableTextEnter(
-        RawTable* table, int column, int row, RawWstringProArray text) {
-        return ::ProTableTextEnter(table, column, row, text);
     }
 
     inline ProErrorCode engineerConnectIdGet(
