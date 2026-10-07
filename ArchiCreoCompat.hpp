@@ -426,10 +426,6 @@ namespace creo::detail {
         return ::ProDwgtabledataAlloc(p_data);
     }
 
-    inline ProErrorCode tableDataRelease(RawTableData* p_data) {
-        return ::ProDwgtabledataFree(p_data);
-    }
-
     inline ProErrorCode tableDataOriginSet(
         RawTableData data, RawPoint3d origin) {
         return ::ProDwgtabledataOriginSet(data, origin);
