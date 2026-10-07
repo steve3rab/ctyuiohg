@@ -513,18 +513,12 @@ namespace creo {
                         &lines));
             });
 
-            ProWstring line = nullptr;
-            CREO_CHECK(
-                ProWstringAlloc(
-                    text.c_str(),
-                    &line));
+            std::vector<wchar_t> line(
+                text.begin(),
+                text.end());
+            line.push_back(L'\\0');
 
-            auto freeLine = Defer([&] {
-                CREO_CHECK(
-                    ProWstringFree(line));
-            });
-
-            lines[0] = line;
+            lines[0] = line.data();
 
             CREO_CHECK(
                 detail::tableTextEnter(
