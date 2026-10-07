@@ -1,10 +1,13 @@
 #pragma once
 
 #include <ProArray.h>
+#include <ProAsmcomp.h>
+#include <ProAsmcomppath.h>
 #include <ProAssembly.h>
 #include <ProCore.h>
 #include <ProMdl.h>
 #include <ProModelitem.h>
+#include <ProParameter.h>
 #include <ProSolid.h>
 #include <ProToolkit.h>
 #include <ProUtil.h>
@@ -18,11 +21,21 @@ namespace creo::detail {
     using RawArray = ::ProArray;
     using RawBoolean = ::ProBoolean;
     using RawModelItem = ::ProModelitem;
+    using RawParameter = ::ProParameter;
+    using RawParamValue = ::ProParamvalue;
+    using RawParamValueType = ::ProParamvalueType;
+    using RawLockStatus = ::ProLockstatus;
     using RawMdlType = ::ProMdlType;
     using RawMdlName = ::ProMdlName;
+    using RawName = ::ProName;
     using RawMdlFileType = ::ProMdlfileType;
     using RawObjectType = ::ProType;
     using RawSolid = ::ProSolid;
+    using RawAssembly = ::ProAssembly;
+    using RawAsmcomp = ::ProAsmcomp;
+    using RawMatrix = ::ProMatrix;
+    using RawVector = ::ProVector;
+    using RawPoint3d = ::ProPoint3d;
 
     inline constexpr RawBoolean kBooleanFalse = PRO_B_FALSE;
     inline constexpr RawBoolean kBooleanTrue = PRO_B_TRUE;
@@ -55,6 +68,72 @@ namespace creo::detail {
         RawMdl model,
         wchar_t* name_out) {
         return ::ProMdlMdlnameGet(model, name_out);
+    }
+
+    inline ProErrorCode mdlToModelitem(
+        RawMdl model,
+        RawModelItem* p_item) {
+        return ::ProMdlToModelitem(model, p_item);
+    }
+
+    inline ProErrorCode paramvalueSet(
+        RawParamValue* p_handle,
+        const void* value,
+        RawParamValueType type) {
+        return ::ProParamvalueSet(p_handle, value, type);
+    }
+
+    inline ProErrorCode paramvalueValueGet(
+        const RawParamValue* p_handle,
+        RawParamValueType type,
+        void* p_value) {
+        return ::ProParamvalueValueGet(p_handle, type, p_value);
+    }
+
+    inline ProErrorCode paramvalueTypeGet(
+        const RawParamValue* p_handle,
+        RawParamValueType* p_type) {
+        return ::ProParamvalueTypeGet(p_handle, p_type);
+    }
+
+    inline ProErrorCode parameterInit(
+        RawModelItem* owner,
+        RawName name,
+        RawParameter* p_param) {
+        return ::ProParameterInit(owner, name, p_param);
+    }
+
+    inline ProErrorCode parameterCreate(
+        RawModelItem* owner,
+        RawName name,
+        RawParamValue* value,
+        RawParameter* p_param) {
+        return ::ProParameterWithUnitsCreate(
+            owner, name, value, nullptr, p_param);
+    }
+
+    inline ProErrorCode parameterValueGet(
+        RawParameter* param,
+        RawParamValue* p_value) {
+        return ::ProParameterValueWithUnitsGet(
+            param, p_value, nullptr);
+    }
+
+    inline ProErrorCode parameterValueSet(
+        RawParameter* param,
+        RawParamValue* value) {
+        return ::ProParameterValueWithUnitsSet(
+            param, value, nullptr);
+    }
+
+    inline ProErrorCode parameterDelete(RawParameter* param) {
+        return ::ProParameterDelete(param);
+    }
+
+    inline ProErrorCode parameterLockstatusGet(
+        RawParameter* param,
+        RawLockStatus* p_status) {
+        return ::ProParameterLockstatusGet(param, p_status);
     }
 
     inline ProErrorCode mdlCurrentGet(RawMdl* p_mdl) {
@@ -107,6 +186,32 @@ namespace creo::detail {
 
     inline ProErrorCode treetoolRefresh(RawMdl model) {
         return ::ProTreetoolRefresh(model);
+    }
+
+    inline ProErrorCode asmcompAssemble(
+        RawAssembly assembly,
+        RawSolid component_model,
+        RawMatrix init_position,
+        RawAsmcomp* p_feature) {
+        return ::ProAsmcompAssemble(
+            assembly,
+            component_model,
+            init_position,
+            p_feature);
+    }
+
+    inline ProErrorCode matrixInit(
+        RawVector x_vector,
+        RawVector y_vector,
+        RawVector z_vector,
+        RawPoint3d origin,
+        RawMatrix matrix) {
+        return ::ProMatrixInit(
+            x_vector,
+            y_vector,
+            z_vector,
+            origin,
+            matrix);
     }
 
     inline ProErrorCode sessionModelList(

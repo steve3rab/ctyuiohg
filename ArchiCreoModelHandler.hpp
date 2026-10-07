@@ -385,6 +385,50 @@ namespace creo {
             window.makeCurrentAndActivate();
         }
 
+        void assemblePart(
+            const ArchiCreoModelHandler& part) const {
+            requireHandle();
+            part.requireHandle();
+
+            if (!isAssembly()) {
+                throw std::invalid_argument(
+                    "ArchiCreoModelHandler::assemblePart: "
+                    "owner model is not an assembly");
+            }
+
+            if (!part.isPart()) {
+                throw std::invalid_argument(
+                    "ArchiCreoModelHandler::assemblePart: "
+                    "component model is not a part");
+            }
+
+            detail::RawVector x_axis{1.0, 0.0, 0.0};
+            detail::RawVector y_axis{0.0, 1.0, 0.0};
+            detail::RawVector z_axis{0.0, 0.0, 1.0};
+            detail::RawPoint3d origin{0.0, 0.0, 0.0};
+            detail::RawMatrix position{};
+
+            CREO_CHECK(
+                detail::matrixInit(
+                    x_axis,
+                    y_axis,
+                    z_axis,
+                    origin,
+                    position));
+
+            detail::RawAsmcomp component{};
+
+            CREO_CHECK(
+                detail::asmcompAssemble(
+                    static_cast<detail::RawAssembly>(
+                        handle_),
+                    static_cast<detail::RawSolid>(
+                        part.raw()),
+                    position,
+                    &component));
+
+        }
+
         void refreshAfterCreation() const {
             requireHandle();
 
