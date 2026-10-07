@@ -86,13 +86,6 @@ namespace creo {
             CREO_CHECK(
                 detail::tableDataAlloc(&data));
 
-            auto freeData = Defer([&] {
-                if (data != nullptr) {
-                    CREO_CHECK(
-                        detail::tableDataRelease(&data));
-                }
-            });
-
             CREO_CHECK(
                 detail::tableDataOriginSet(
                     data,
