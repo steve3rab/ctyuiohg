@@ -488,7 +488,9 @@ namespace creo::detail {
     }
 
     inline ProErrorCode tableRowHeightAutoAdjustSet(
-        RawTable* table, int row, ProTblRowheightAutoAdjust value) {
+        RawTable* table,
+        int row,
+        ProTableRowheightAutoadjusttype value) {
         return ::ProTableRowheightAutoadjustSet(table, row, value);
     }
 
@@ -518,7 +520,21 @@ namespace creo::detail {
     }
 
     inline ProErrorCode wstringProArrayFree(RawWstringProArray* p_array) {
-        return ::ProArrayFree(reinterpret_cast<ProArray*>(p_array));
+        return ::ProWstringproarrayFree(p_array);
+    }
+
+    inline ProErrorCode tableCellTextGet(
+        RawTable* table,
+        int column,
+        int row,
+        ProTableParamMode mode,
+        RawWstringProArray* p_lines) {
+        return ::ProTableCelltextGet(
+            table,
+            column,
+            row,
+            mode,
+            p_lines);
     }
 
     inline ProErrorCode tableTextEnter(
