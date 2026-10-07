@@ -703,7 +703,7 @@ namespace creo {
             }
         }
 
-        detail::RawTable table_;
+        mutable detail::RawTable table_;
         bool valid_;
     };
 
