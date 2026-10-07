@@ -430,6 +430,58 @@ namespace creo::detail {
         return ::ProTableColumnWidthGet(table, column, characters, width);
     }
 
+    inline ProErrorCode tableCellsMerge(
+        RawTable* table,
+        int start_column,
+        int start_row,
+        int end_column,
+        int end_row,
+        RawBoolean display) {
+        return ::ProTableCellsMerge(
+            table,
+            start_column,
+            start_row,
+            end_column,
+            end_row,
+            display);
+    }
+
+    inline ProErrorCode tableCellMergeGet(
+        RawTable* table,
+        int row,
+        int column,
+        RawBoolean* is_merge,
+        int* start_row,
+        int* start_column,
+        int* end_row,
+        int* end_column) {
+        return ::ProTableCellMergeGet(
+            table,
+            row,
+            column,
+            is_merge,
+            start_row,
+            start_column,
+            end_row,
+            end_column);
+    }
+
+    inline ProErrorCode tableCellsRemesh(
+        RawTable* table,
+        int start_column,
+        int start_row,
+        int end_column,
+        int end_row,
+        RawBoolean display) {
+        return ::ProTableCellsRemesh(
+            table,
+            start_column,
+            start_row,
+            end_column,
+            end_row,
+            display);
+    }
+
     inline ProErrorCode tableCellTextWrap(
         RawTable* table, int row, int column) {
         return ::ProTableCelltextWrap(table, row, column);
