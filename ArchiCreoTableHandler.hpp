@@ -86,7 +86,10 @@ namespace creo {
             CREO_CHECK(
                 detail::tableDataAlloc(&data));
 
-            detail::RawPoint3d tableOrigin = origin;
+            detail::RawPoint3d tableOrigin{
+                origin[0],
+                origin[1],
+                origin[2]};
 
             CREO_CHECK(
                 detail::tableDataOriginSet(
