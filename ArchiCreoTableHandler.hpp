@@ -99,7 +99,7 @@ namespace creo {
             CREO_CHECK(
                 detail::tableDataSizetypeSet(
                     data,
-                    PROTABLESIZE_CHARACTERS));
+                    detail::kTableSizeCharacters));
 
             CREO_CHECK(
                 detail::tableDataRowsSet(
@@ -255,7 +255,7 @@ namespace creo {
                     &table_,
                     column,
                     normalizedWidth,
-                    PROTABLESIZE_CHARS_TRUE));
+                    detail::kTableSizeCharsTrue));
         }
 
         void mergeCells(
@@ -454,7 +454,7 @@ namespace creo {
                 detail::tableColumnWidthGet(
                     &table_,
                     column,
-                    PROTABLESIZE_CHARS_TRUE,
+                    detail::kTableSizeCharsTrue,
                     &currentWidth);
 
             if (status != detail::kNoError) {
@@ -525,7 +525,7 @@ namespace creo {
                 detail::tableColumnWidthGet(
                     &table_,
                     column,
-                    PROTABLESIZE_CHARACTERS,
+                    detail::kTableSizeCharacters,
                     &width));
 
             return width < static_cast<double>(kMinColumnWidth)
@@ -674,7 +674,7 @@ namespace creo {
                 detail::tableRowHeightAutoAdjustSet(
                     &table_,
                     row,
-                    PROTBLROWHEIGHT_AUTOADJUST_TRUE));
+                    detail::kTableRowHeightAutoAdjustTrue));
         }
 
         void requireTable() const {
