@@ -389,10 +389,6 @@ namespace creo::detail {
         return ::ProTableDataAlloc(p_data);
     }
 
-    inline ProErrorCode tableDataFree(RawTableData* p_data) {
-        return ::ProTableDataFree(p_data);
-    }
-
     inline ProErrorCode tableDataOriginSet(RawTableData data, RawPoint3d origin) {
         return ::ProTableDataOriginSet(data, origin);
     }
@@ -486,11 +482,6 @@ namespace creo::detail {
             end_column,
             end_row,
             display);
-    }
-
-    inline ProErrorCode tableCellTextWrap(
-        RawTable* table, int row, int column) {
-        return ::ProTableCelltextWrap(table, row, column);
     }
 
     inline ProErrorCode tableRowHeightAutoAdjustSet(
