@@ -199,10 +199,9 @@ namespace creo {
 
                 const double requiredWidth =
                     static_cast<double>(
-                        std::clamp(
-                            lineLength,
-                            static_cast<std::size_t>(0),
-                            static_cast<std::size_t>(kMaxColumnWidth)));
+                        lineLength > static_cast<std::size_t>(kMaxColumnWidth)
+                            ? static_cast<std::size_t>(kMaxColumnWidth)
+                            : lineLength);
 
                 if (requiredWidth > requiredWidths[columnIndex]) {
                     requiredWidths[columnIndex] = requiredWidth;
@@ -245,10 +244,11 @@ namespace creo {
             }
 
             const double normalizedWidth =
-                std::clamp(
-                    width,
-                    static_cast<double>(kMinColumnWidth),
-                    static_cast<double>(kMaxColumnWidth));
+                width < static_cast<double>(kMinColumnWidth)
+                    ? static_cast<double>(kMinColumnWidth)
+                    : (width > static_cast<double>(kMaxColumnWidth)
+                        ? static_cast<double>(kMaxColumnWidth)
+                        : width);
 
             CREO_CHECK(
                 detail::tableColumnWidthSet(
@@ -322,10 +322,11 @@ namespace creo {
             const double normalizedWidth =
                 width < 0.0
                     ? width
-                    : std::clamp(
-                          width,
-                          static_cast<double>(kMinColumnWidth),
-                          static_cast<double>(kMaxColumnWidth));
+                    : width < static_cast<double>(kMinColumnWidth)
+                              ? static_cast<double>(kMinColumnWidth)
+                              : (width > static_cast<double>(kMaxColumnWidth)
+                                  ? static_cast<double>(kMaxColumnWidth)
+                                  : width);
 
             CREO_CHECK(
                 detail::tableColumnAdd(
@@ -402,11 +403,11 @@ namespace creo {
                 if (!requestedWidths.empty()) {
                     widths[
                         static_cast<std::size_t>(column)] =
-                        std::clamp(
-                            requestedWidths[
-                                static_cast<std::size_t>(column)],
-                            static_cast<double>(kMinColumnWidth),
-                            static_cast<double>(kMaxColumnWidth));
+                        requestedWidths[static_cast<std::size_t>(column)] < static_cast<double>(kMinColumnWidth)
+                            ? static_cast<double>(kMinColumnWidth)
+                            : (requestedWidths[static_cast<std::size_t>(column)] > static_cast<double>(kMaxColumnWidth)
+                                ? static_cast<double>(kMaxColumnWidth)
+                                : requestedWidths[static_cast<std::size_t>(column)]);
                 }
             }
 
@@ -421,9 +422,9 @@ namespace creo {
 
             for (const wchar_t character : text) {
                 if (character == L'\n') {
-                    maxLength = std::max(
-                        maxLength,
-                        currentLength);
+                    if (currentLength > maxLength) {
+                        maxLength = currentLength;
+                    }
                     currentLength = 0;
                     continue;
                 }
@@ -431,9 +432,7 @@ namespace creo {
                 ++currentLength;
             }
 
-            return std::max(
-                maxLength,
-                currentLength);
+            return maxLength > currentLength ? maxLength : currentLength;
         }
 
         void setColumnWidthForText(
@@ -442,11 +441,11 @@ namespace creo {
 
             const double requiredWidth =
                 static_cast<double>(
-                    std::clamp(
-                        maxLineLength(text),
-                        static_cast<std::size_t>(kMinColumnWidth),
-                        static_cast<std::size_t>(
-                            kMaxColumnWidth)));
+                    maxLineLength(text) < static_cast<std::size_t>(kMinColumnWidth)
+                        ? static_cast<std::size_t>(kMinColumnWidth)
+                        : (maxLineLength(text) > static_cast<std::size_t>(kMaxColumnWidth)
+                            ? static_cast<std::size_t>(kMaxColumnWidth)
+                            : maxLineLength(text)));
 
             double currentWidth =
                 static_cast<double>(kMinColumnWidth);
@@ -464,9 +463,7 @@ namespace creo {
 
             setColumnWidth(
                 column,
-                std::max(
-                    currentWidth,
-                    requiredWidth));
+                currentWidth > requiredWidth ? currentWidth : requiredWidth);
         }
 
         void enterWrappedCellText(
@@ -531,10 +528,11 @@ namespace creo {
                     PROTABLESIZE_CHARACTERS,
                     &width));
 
-            return std::clamp(
-                width,
-                static_cast<double>(kMinColumnWidth),
-                static_cast<double>(kMaxColumnWidth));
+            return width < static_cast<double>(kMinColumnWidth)
+                ? static_cast<double>(kMinColumnWidth)
+                : (width > static_cast<double>(kMaxColumnWidth)
+                    ? static_cast<double>(kMaxColumnWidth)
+                    : width);
         }
 
         static std::wstring normalizeLineBreaks(
@@ -563,9 +561,9 @@ namespace creo {
             const std::wstring& text,
             std::size_t width) {
 
-            width = std::max<std::size_t>(
-                width,
-                static_cast<std::size_t>(kMinColumnWidth));
+            if (width < static_cast<std::size_t>(kMinColumnWidth)) {
+                width = static_cast<std::size_t>(kMinColumnWidth);
+            }
 
             std::vector<std::wstring> result;
             std::wstring currentLine;
@@ -623,9 +621,9 @@ namespace creo {
                             std::size_t offset = 0;
                             while (offset < word.size()) {
                                 const std::size_t count =
-                                    std::min(
-                                        width,
-                                        word.size() - offset);
+                                    width < (word.size() - offset)
+                                    ? width
+                                    : (word.size() - offset);
 
                                 result.push_back(
                                     word.substr(
