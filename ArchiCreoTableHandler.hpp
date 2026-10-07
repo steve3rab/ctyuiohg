@@ -194,19 +194,20 @@ namespace creo {
                 const std::size_t lineLength =
                     maxLineLength(cell.text);
 
-                requiredWidths[
-                    static_cast<std::size_t>(
-                        cell.column - 1)] =
+                const std::size_t columnIndex =
+                    static_cast<std::size_t>(cell.column - 1);
+
+                const double requiredWidth =
+                    static_cast<double>(
+                        std::clamp(
+                            lineLength,
+                            static_cast<std::size_t>(0),
+                            static_cast<std::size_t>(kMaxColumnWidth)));
+
+                requiredWidths[columnIndex] =
                     std::max(
-                        requiredWidths[
-                            static_cast<std::size_t>(
-                                cell.column - 1)],
-                        static_cast<double>(
-                            std::clamp(
-                                lineLength,
-                                static_cast<std::size_t>(0),
-                                static_cast<std::size_t>(
-                                    kMaxColumnWidth))));
+                        requiredWidths[columnIndex],
+                        requiredWidth);
             }
 
             for (int column = 1;
