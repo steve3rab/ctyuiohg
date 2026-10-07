@@ -501,6 +501,7 @@ namespace creo {
 
             CREO_CHECK(
                 detail::wstringProArrayAlloc(
+                    static_cast<int>(lines.size()),
                     &textLines));
 
             auto freeTextLines = Defer([&] {
