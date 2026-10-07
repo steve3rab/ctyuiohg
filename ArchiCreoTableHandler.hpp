@@ -167,16 +167,10 @@ namespace creo {
                 column,
                 text);
 
-            if (!text.empty()) {
-                enterCellText(
-                    column,
-                    row,
-                    text);
-            }
-
-            wrapCell(
+            enterWrappedCellText(
                 column,
-                row);
+                row,
+                text);
 
             enableRowAutoHeight(row);
         }
@@ -227,16 +221,10 @@ namespace creo {
             }
 
             for (const ArchiCreoTableCell& cell : cells) {
-                if (!cell.text.empty()) {
-                    enterCellText(
-                        cell.column,
-                        cell.row,
-                        cell.text);
-                }
-
-                wrapCell(
+                enterWrappedCellText(
                     cell.column,
-                    cell.row);
+                    cell.row,
+                    cell.text);
 
                 enableRowAutoHeight(
                     cell.row);
@@ -494,36 +482,202 @@ namespace creo {
                     requiredWidth));
         }
 
-        void enterCellText(
+        void enterWrappedCellText(
             int column,
             int row,
             const std::wstring& text) const {
 
-            detail::RawWstringProArray lines = nullptr;
+            const std::wstring normalized =
+                normalizeLineBreaks(text);
+
+            const std::size_t width =
+                static_cast<std::size_t>(
+                    getColumnWidthInCharacters(column));
+
+            const std::vector<std::wstring> lines =
+                wrapText(normalized, width);
+
+            detail::RawWstringProArray textLines = nullptr;
 
             CREO_CHECK(
                 detail::wstringProArrayAlloc(
-                    &lines));
+                    &textLines));
 
-            auto freeLines = Defer([&] {
+            auto freeTextLines = Defer([&] {
                 CREO_CHECK(
                     detail::wstringProArrayFree(
-                        &lines));
+                        &textLines));
             });
 
-            std::vector<wchar_t> line(
-                text.begin(),
-                text.end());
-            line.push_back(L'\\0');
+            for (std::size_t index = 0;
+                 index < lines.size();
+                 ++index) {
 
-            lines[0] = line.data();
+                std::vector<wchar_t> buffer(
+                    lines[index].begin(),
+                    lines[index].end());
+
+                buffer.push_back(L'\\0');
+                textLines[index] = buffer.data();
+            }
 
             CREO_CHECK(
                 detail::tableTextEnter(
                     &table_,
                     column,
                     row,
-                    lines));
+                    textLines));
+        }
+
+        double getColumnWidthInCharacters(
+            int column) const {
+
+            double width =
+                static_cast<double>(kMinColumnWidth);
+
+            CREO_CHECK(
+                detail::tableColumnWidthGet(
+                    &table_,
+                    column,
+                    PROTABLESIZE_CHARACTERS,
+                    &width));
+
+            return std::clamp(
+                width,
+                static_cast<double>(kMinColumnWidth),
+                static_cast<double>(kMaxColumnWidth));
+        }
+
+        static std::wstring normalizeLineBreaks(
+            const std::wstring& text) {
+
+            std::wstring result;
+            result.reserve(text.size());
+
+            for (std::size_t i = 0; i < text.size(); ++i) {
+                if (text[i] == L'\\r') {
+                    if (i + 1 < text.size() &&
+                        text[i + 1] == L'\\n') {
+                        ++i;
+                    }
+
+                    result.push_back(L'\\n');
+                } else {
+                    result.push_back(text[i]);
+                }
+            }
+
+            return result;
+        }
+
+        static std::vector<std::wstring> wrapText(
+            const std::wstring& text,
+            std::size_t width) {
+
+            width = std::max<std::size_t>(
+                width,
+                static_cast<std::size_t>(kMinColumnWidth));
+
+            std::vector<std::wstring> result;
+            std::wstring currentLine;
+
+            auto flushLine = [&] {
+                result.push_back(currentLine);
+                currentLine.clear();
+            };
+
+            std::size_t position = 0;
+
+            while (position <= text.size()) {
+                const std::size_t lineEnd =
+                    text.find(L'\\n', position);
+
+                const std::wstring paragraph =
+                    text.substr(
+                        position,
+                        lineEnd == std::wstring::npos
+                            ? std::wstring::npos
+                            : lineEnd - position);
+
+                if (paragraph.empty()) {
+                    flushLine();
+                } else {
+                    std::size_t wordStart = 0;
+
+                    while (wordStart < paragraph.size()) {
+                        while (wordStart < paragraph.size() &&
+                               paragraph[wordStart] == L' ') {
+                            ++wordStart;
+                        }
+
+                        if (wordStart >= paragraph.size()) {
+                            break;
+                        }
+
+                        std::size_t wordEnd =
+                            paragraph.find(L' ', wordStart);
+
+                        if (wordEnd == std::wstring::npos) {
+                            wordEnd = paragraph.size();
+                        }
+
+                        const std::wstring word =
+                            paragraph.substr(
+                                wordStart,
+                                wordEnd - wordStart);
+
+                        if (word.size() > width) {
+                            if (!currentLine.empty()) {
+                                flushLine();
+                            }
+
+                            std::size_t offset = 0;
+                            while (offset < word.size()) {
+                                const std::size_t count =
+                                    std::min(
+                                        width,
+                                        word.size() - offset);
+
+                                result.push_back(
+                                    word.substr(
+                                        offset,
+                                        count));
+
+                                offset += count;
+                            }
+                        } else if (currentLine.empty()) {
+                            currentLine = word;
+                        } else if (currentLine.size() + 1 + word.size() <= width) {
+                            currentLine += L' ';
+                            currentLine += word;
+                        } else {
+                            flushLine();
+                            currentLine = word;
+                        }
+
+                        wordStart =
+                            wordEnd == paragraph.size()
+                                ? paragraph.size()
+                                : wordEnd + 1;
+                    }
+
+                    if (!currentLine.empty()) {
+                        flushLine();
+                    }
+                }
+
+                if (lineEnd == std::wstring::npos) {
+                    break;
+                }
+
+                position = lineEnd + 1;
+            }
+
+            if (result.empty()) {
+                result.emplace_back();
+            }
+
+            return result;
         }
 
         void enableRowAutoHeight(
