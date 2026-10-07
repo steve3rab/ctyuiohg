@@ -782,7 +782,8 @@ namespace creo::detail {
 
     inline ProErrorCode wstringProArrayFree(
         RawWstringProArray* p_array) {
-        return ::ProWstringproarrayFree(p_array);
+        return ::ProWstringproarrayFree(
+            reinterpret_cast<wchar_t**>(p_array));
     }
 
     inline ProErrorCode engineerConnectIdGet(
