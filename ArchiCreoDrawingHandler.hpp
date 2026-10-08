@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "ArchiCreoModelHandler.hpp"
+#include "ArchiCreoAnnotationHandler.hpp"
 #include "ArchiCreoTableHandler.hpp"
 
 namespace creo {
@@ -122,6 +123,16 @@ namespace creo {
                 origin,
                 rowHeight,
                 columnWidths);
+        }
+
+        [[nodiscard]] ArchiCreoAnnotationHandler
+        annotation(
+            detail::RawAnnotation annotationHandle) const {
+
+            requireDrawing();
+
+            return ArchiCreoAnnotationHandler(
+                annotationHandle);
         }
 
         [[nodiscard]] ArchiCreoModelHandler model() const {
