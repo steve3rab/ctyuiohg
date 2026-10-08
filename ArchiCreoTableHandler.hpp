@@ -159,33 +159,13 @@ namespace creo {
         }
 
         [[nodiscard]] int rowCount() const {
-            requireTable();
-
             int rows = 0;
-            int columns = 0;
-
-            CREO_CHECK(
-                detail::tableRowsColumnsCount(
-                    &table_,
-                    &rows,
-                    &columns));
-
+            (void)getDimensions(&rows);
             return rows;
         }
 
         [[nodiscard]] int columnCount() const {
-            requireTable();
-
-            int rows = 0;
-            int columns = 0;
-
-            CREO_CHECK(
-                detail::tableRowsColumnsCount(
-                    &table_,
-                    &rows,
-                    &columns));
-
-            return columns;
+            return getDimensions();
         }
 
         void setCellText(
@@ -212,30 +192,41 @@ namespace creo {
 
             requireTable();
 
-            for (const ArchiCreoTableCell& cell : cells) {
-                requireCell(
-                    cell.column,
-                    cell.row);
+            if (cells.empty()) {
+                return;
             }
 
-            const int columns = columnCount();
+            int rows = 0;
+            const int columns = getDimensions(&rows);
+
+            for (const ArchiCreoTableCell& cell : cells) {
+                if (cell.column < 1 ||
+                    cell.column > columns ||
+                    cell.row < 1 ||
+                    cell.row > rows) {
+                    throw std::out_of_range(
+                        "ArchiCreoTableHandler::setCells: "
+                        "cell index out of range");
+                }
+            }
 
             std::vector<double> requiredWidths(
                 static_cast<std::size_t>(columns),
                 static_cast<double>(kMinColumnWidth));
 
             for (const ArchiCreoTableCell& cell : cells) {
+                const std::wstring normalized =
+                    normalizeLineBreaks(cell.text);
+
                 const std::size_t lineLength =
-                    maxLineLength(cell.text);
+                    maxLineLength(normalized);
 
                 const std::size_t columnIndex =
                     static_cast<std::size_t>(cell.column - 1);
 
                 const double requiredWidth =
-                    static_cast<double>(
-                        lineLength > static_cast<std::size_t>(kMaxColumnWidth)
-                            ? static_cast<std::size_t>(kMaxColumnWidth)
-                            : lineLength);
+                    normalizeColumnWidth(
+                        static_cast<double>(lineLength));
 
                 if (requiredWidth > requiredWidths[columnIndex]) {
                     requiredWidths[columnIndex] = requiredWidth;
@@ -246,11 +237,24 @@ namespace creo {
                  column <= columns;
                  ++column) {
 
-                setColumnWidth(
-                    column,
-                    requiredWidths[
-                        static_cast<std::size_t>(
-                            column - 1)]);
+                double currentWidth =
+                    static_cast<double>(kMinColumnWidth);
+
+                CREO_CHECK(
+                    detail::tableColumnWidthGet(
+                        &table_,
+                        column,
+                        detail::kTableSizeCharsTrue,
+                        &currentWidth));
+
+                const double targetWidth =
+                    currentWidth > requiredWidths[
+                        static_cast<std::size_t>(column - 1)]
+                        ? currentWidth
+                        : requiredWidths[
+                            static_cast<std::size_t>(column - 1)];
+
+                setColumnWidth(column, targetWidth);
             }
 
             for (const ArchiCreoTableCell& cell : cells) {
@@ -262,6 +266,33 @@ namespace creo {
                 enableRowAutoHeight(
                     cell.row);
             }
+        }
+
+        int getDimensions(
+            int* p_rows = nullptr) const {
+
+            requireTable();
+
+            int rows = 0;
+            int columns = 0;
+
+            CREO_CHECK(
+                detail::tableRowsColumnsCount(
+                    &table_,
+                    &rows,
+                    &columns));
+
+            if (rows <= 0 || columns <= 0) {
+                throw std::runtime_error(
+                    "ArchiCreoTableHandler: "
+                    "Creo returned invalid table dimensions");
+            }
+
+            if (p_rows != nullptr) {
+                *p_rows = rows;
+            }
+
+            return columns;
         }
 
         void setColumnWidth(
