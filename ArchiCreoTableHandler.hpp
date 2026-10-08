@@ -247,15 +247,18 @@ namespace creo {
                         detail::kTableSizeCharsTrue,
                         &currentWidth));
 
-                const double targetWidth =
-                    currentWidth > requiredWidths[
-                        static_cast<std::size_t>(column - 1)]
-                        ? currentWidth
-                        : requiredWidths[
-                            static_cast<std::size_t>(column - 1)];
+                const double requiredWidth =
+                    requiredWidths[
+                        static_cast<std::size_t>(column - 1)];
 
-                setColumnWidth(column, targetWidth);
+                if (currentWidth < requiredWidth) {
+                    setColumnWidth(column, requiredWidth);
+                }
             }
+
+            std::vector<bool> autoHeightRows(
+                static_cast<std::size_t>(rows + 1),
+                false);
 
             for (const ArchiCreoTableCell& cell : cells) {
                 enterWrappedCellText(
@@ -263,8 +266,13 @@ namespace creo {
                     cell.row,
                     cell.text);
 
-                enableRowAutoHeight(
-                    cell.row);
+                const std::size_t rowIndex =
+                    static_cast<std::size_t>(cell.row);
+
+                if (!autoHeightRows[rowIndex]) {
+                    enableRowAutoHeight(cell.row);
+                    autoHeightRows[rowIndex] = true;
+                }
             }
         }
 
@@ -546,9 +554,11 @@ namespace creo {
                 CREO_CHECK(status);
             }
 
-            setColumnWidth(
-                column,
-                currentWidth > requiredWidth ? currentWidth : requiredWidth);
+            if (currentWidth < requiredWidth) {
+                setColumnWidth(
+                    column,
+                    requiredWidth);
+            }
         }
 
         void enterWrappedCellText(
