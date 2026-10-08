@@ -9,12 +9,14 @@
 #include <ProModelitem.h>
 #include <ProParameter.h>
 #include <ProSolid.h>
-#if defined(CREO10)
+#if defined(CREO10) && defined(CREO13)
+#error "Define only one of CREO10 or CREO13 when building ArchiCreo"
+#elif defined(CREO10)
 #include <ProDwgtable.h>
 #elif defined(CREO13)
 #include <ProTable.h>
 #else
-#error "Define CREO10 or CREO13 when building ArchiCreo"
+#error "Define exactly one of CREO10 or CREO13 when building ArchiCreo"
 #endif
 #include <ProToolkit.h>
 #include <ProUtil.h>
@@ -90,7 +92,18 @@ namespace creo::detail {
     }
 
     inline ProErrorCode arrayFree(RawArray* p_array) {
-        return ::ProArrayFree(p_array);
+        if (p_array == nullptr || *p_array == nullptr) {
+            return kNoError;
+        }
+
+        const ProErrorCode status =
+            ::ProArrayFree(p_array);
+
+        if (status == kNoError) {
+            *p_array = nullptr;
+        }
+
+        return status;
     }
 
     inline ProErrorCode arraySizeGet(RawArray array, int* p_size) {
@@ -117,13 +130,13 @@ namespace creo::detail {
 
     inline ProErrorCode paramvalueSet(
         RawParamValue* p_handle,
-        const void* value,
+        void* value,
         RawParamValueType type) {
         return ::ProParamvalueSet(p_handle, value, type);
     }
 
     inline ProErrorCode paramvalueValueGet(
-        const RawParamValue* p_handle,
+        RawParamValue* p_handle,
         RawParamValueType type,
         void* p_value) {
         return ::ProParamvalueValueGet(p_handle, type, p_value);
@@ -270,9 +283,16 @@ namespace creo::detail {
             return kNoError;
         }
 
-        return ::ProArrayFree(
-            reinterpret_cast<RawArray*>(
-                p_model_array));
+        const ProErrorCode status =
+            ::ProArrayFree(
+                reinterpret_cast<RawArray*>(
+                    p_model_array));
+
+        if (status == kNoError) {
+            *p_model_array = nullptr;
+        }
+
+        return status;
     }
 
     inline ProErrorCode mdlWindowGet(
@@ -431,7 +451,14 @@ namespace creo::detail {
             return kNoError;
         }
 
-        return ::ProDwgtabledataFree(p_data);
+        const ProErrorCode status =
+            ::ProDwgtabledataFree(p_data);
+
+        if (status == kNoError) {
+            *p_data = nullptr;
+        }
+
+        return status;
     }
 
     inline ProErrorCode tableDataOriginSet(
@@ -628,7 +655,14 @@ namespace creo::detail {
             return kNoError;
         }
 
-        return ::ProTableDataFree(p_data);
+        const ProErrorCode status =
+            ::ProTableDataFree(p_data);
+
+        if (status == kNoError) {
+            *p_data = nullptr;
+        }
+
+        return status;
     }
 
     inline ProErrorCode tableDataOriginSet(
@@ -784,6 +818,14 @@ namespace creo::detail {
             table, column, row, text);
     }
 
+    inline ProErrorCode tableCellTextWrap(
+        RawTable* table,
+        int row,
+        int column) {
+        return ::ProTableCelltextWrap(
+            table, row, column);
+    }
+
     inline ProErrorCode tableCellTextGet(
         RawTable* table,
         int column,
@@ -812,11 +854,19 @@ namespace creo::detail {
             return kNoError;
         }
 
-        // The array is allocated by wstringProArrayAlloc() with
-        // ProArrayAlloc(). Its elements point to caller-owned buffers,
-        // so only the ProArray container must be released here.
-        return ::ProArrayFree(
-            reinterpret_cast<RawArray*>(p_array));
+        // This wrapper is only for arrays allocated by
+        // wstringProArrayAlloc(). Output arrays returned by Creo,
+        // such as ProTableCelltextGet(), must be released with
+        // ProWstringproarrayFree() instead.
+        const ProErrorCode status =
+            ::ProArrayFree(
+                reinterpret_cast<RawArray*>(p_array));
+
+        if (status == kNoError) {
+            *p_array = nullptr;
+        }
+
+        return status;
     }
 
     inline ProErrorCode engineerConnectIdGet(
