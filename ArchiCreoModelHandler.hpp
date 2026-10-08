@@ -669,15 +669,15 @@ namespace creo {
                 return *existing;
             }
 
-            const std::wstring source_path = template_path.wstring();
+            std::wstring source_path = template_path.wstring();
             validateProPath(source_path, operation);
-            const std::wstring destination_path =
+            std::wstring destination_path =
                 destination_directory.wstring();
             validateProPath(destination_path, operation);
 
             detail::RawMdl template_model = nullptr;
             CREO_CHECK(detail::mdlFiletypeLoad(
-                const_cast<wchar_t*>(source_path.c_str()),
+                source_path.data(),
                 file_type,
                 PRO_B_FALSE,
                 &template_model));
