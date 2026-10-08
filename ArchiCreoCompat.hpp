@@ -131,20 +131,20 @@ namespace creo::detail {
 
     inline ProErrorCode paramvalueSet(
         RawParamValue* p_handle,
-        const void* value,
+        void* value,
         RawParamValueType type) {
         return ::ProParamvalueSet(
             p_handle,
-            const_cast<void*>(value),
+            value,
             type);
     }
 
     inline ProErrorCode paramvalueValueGet(
-        const RawParamValue* p_handle,
+        RawParamValue* p_handle,
         RawParamValueType type,
         void* p_value) {
         return ::ProParamvalueValueGet(
-            const_cast<RawParamValue*>(p_handle),
+            p_handle,
             type,
             p_value);
     }
