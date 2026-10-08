@@ -8,6 +8,7 @@
 #include <ProMdl.h>
 #include <ProModelitem.h>
 #include <ProParameter.h>
+#include <ProParamval.h>
 #include <ProSolid.h>
 #if defined(CREO10) && defined(CREO13)
 #error "Define only one of CREO10 or CREO13 when building ArchiCreo"
