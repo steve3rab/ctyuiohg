@@ -341,41 +341,49 @@ namespace creo {
                     using T = std::decay_t<decltype(typedValue)>;
 
                     if constexpr (std::is_same_v<T, double>) {
+                        double mutableValue = typedValue;
+
                         CREO_CHECK(
                             detail::paramvalueSet(
                                 &result,
-                                &typedValue,
+                                &mutableValue,
                                 PRO_PARAM_DOUBLE));
                     } else if constexpr (
                         std::is_same_v<T, std::wstring>) {
+                        std::wstring mutableValue = typedValue;
+
                         CREO_CHECK(
                             detail::paramvalueSet(
                                 &result,
-                                typedValue.c_str(),
+                                mutableValue.data(),
                                 PRO_PARAM_STRING));
                     } else if constexpr (
                         std::is_same_v<T, int>) {
+                        int mutableValue = typedValue;
+
                         CREO_CHECK(
                             detail::paramvalueSet(
                                 &result,
-                                &typedValue,
+                                &mutableValue,
                                 PRO_PARAM_INTEGER));
                     } else if constexpr (
                         std::is_same_v<T, bool>) {
-                        const short booleanValue =
+                        short mutableValue =
                             typedValue ? 1 : 0;
+
                         CREO_CHECK(
                             detail::paramvalueSet(
                                 &result,
-                                &booleanValue,
+                                &mutableValue,
                                 PRO_PARAM_BOOLEAN));
                     } else if constexpr (
                         std::is_same_v<T, ParameterNoteId>) {
-                        const int noteId = typedValue.value;
+                        int mutableValue = typedValue.value;
+
                         CREO_CHECK(
                             detail::paramvalueSet(
                                 &result,
-                                &noteId,
+                                &mutableValue,
                                 PRO_PARAM_NOTE_ID));
                     }
                 },
@@ -385,7 +393,7 @@ namespace creo {
         }
 
         static ParameterValue toParameterValue(
-            const detail::RawParamValue& value) {
+            detail::RawParamValue& value) {
             switch (value.type) {
                 case PRO_PARAM_DOUBLE: {
                     double result = 0.0;
