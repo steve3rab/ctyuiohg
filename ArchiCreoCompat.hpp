@@ -808,8 +808,15 @@ namespace creo::detail {
 
     inline ProErrorCode wstringProArrayFree(
         RawWstringProArray* p_array) {
-        return ::ProWstringproarrayFree(
-            reinterpret_cast<wchar_t**>(p_array));
+        if (p_array == nullptr || *p_array == nullptr) {
+            return kNoError;
+        }
+
+        // The array is allocated by wstringProArrayAlloc() with
+        // ProArrayAlloc(). Its elements point to caller-owned buffers,
+        // so only the ProArray container must be released here.
+        return ::ProArrayFree(
+            reinterpret_cast<RawArray*>(p_array));
     }
 
     inline ProErrorCode engineerConnectIdGet(
