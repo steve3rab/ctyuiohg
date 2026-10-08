@@ -966,6 +966,14 @@ namespace creo::detail {
             is_inactive);
     }
 
+    inline ProErrorCode annotationRotate(
+        RawAnnotation* annotation,
+        double rotation) {
+        return ::ProAnnotationRotate(
+            annotation,
+            rotation);
+    }
+
     inline ProErrorCode annotationIsAssociative(
         RawAnnotation* annotation,
         RawDrawing drawing,
