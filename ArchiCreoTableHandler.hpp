@@ -80,7 +80,7 @@ namespace creo {
 
             validateOrigin(origin);
 
-            const std::vector<double> widths =
+            std::vector<double> widths =
                 normalizeColumnWidths(columns, columnWidths);
 
             std::vector<double> rowHeights(
@@ -141,6 +141,13 @@ namespace creo {
                     data,
                     PRO_B_FALSE,
                     &table));
+
+            // Pro*TableDataFree() is the documented owner-side cleanup
+            // for the data allocated by Pro*TableDataAlloc().
+            CREO_CHECK(
+                detail::tableDataFree(&data));
+
+            releaseData.Dismiss();
 
             if (table == nullptr) {
                 throw std::runtime_error(
@@ -211,7 +218,6 @@ namespace creo {
                     cell.row);
             }
 
-            const int rows = rowCount();
             const int columns = columnCount();
 
             std::vector<double> requiredWidths(
@@ -247,7 +253,6 @@ namespace creo {
                             column - 1)]);
             }
 
-            (void)rows;
             for (const ArchiCreoTableCell& cell : cells) {
                 enterWrappedCellText(
                     cell.column,
