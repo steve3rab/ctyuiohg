@@ -130,16 +130,22 @@ namespace creo::detail {
 
     inline ProErrorCode paramvalueSet(
         RawParamValue* p_handle,
-        void* value,
+        const void* value,
         RawParamValueType type) {
-        return ::ProParamvalueSet(p_handle, value, type);
+        return ::ProParamvalueSet(
+            p_handle,
+            const_cast<void*>(value),
+            type);
     }
 
     inline ProErrorCode paramvalueValueGet(
-        RawParamValue* p_handle,
+        const RawParamValue* p_handle,
         RawParamValueType type,
         void* p_value) {
-        return ::ProParamvalueValueGet(p_handle, type, p_value);
+        return ::ProParamvalueValueGet(
+            const_cast<RawParamValue*>(p_handle),
+            type,
+            p_value);
     }
 
     inline ProErrorCode paramvalueTypeGet(
@@ -841,6 +847,16 @@ namespace creo::detail {
     inline ProErrorCode wstringProArrayAlloc(
         int count,
         RawWstringProArray* p_array) {
+        if (count < 0 || p_array == nullptr) {
+            return PRO_TK_BAD_INPUTS;
+        }
+
+        *p_array = nullptr;
+
+        if (count == 0) {
+            return kNoError;
+        }
+
         return ::ProArrayAlloc(
             count,
             sizeof(ProWstring),
@@ -854,10 +870,8 @@ namespace creo::detail {
             return kNoError;
         }
 
-        // This wrapper is only for arrays allocated by
-        // wstringProArrayAlloc(). Output arrays returned by Creo,
-        // such as ProTableCelltextGet(), must be released with
-        // ProWstringproarrayFree() instead.
+        // The array is owned by the caller and was allocated through
+        // wstringProArrayAlloc().
         const ProErrorCode status =
             ::ProArrayFree(
                 reinterpret_cast<RawArray*>(p_array));
@@ -867,6 +881,18 @@ namespace creo::detail {
         }
 
         return status;
+    }
+
+    inline ProErrorCode wstringProArrayOutputFree(
+        RawWstringProArray* p_array) {
+        if (p_array == nullptr || *p_array == nullptr) {
+            return kNoError;
+        }
+
+        // Use this only for wide-string arrays returned by Creo TOOLKIT,
+        // such as ProTableCelltextGet().
+        return ::ProWstringproarrayFree(
+            reinterpret_cast<wchar_t**>(p_array));
     }
 
     inline ProErrorCode engineerConnectIdGet(
