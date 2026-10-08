@@ -1,6 +1,6 @@
 #pragma once
 
-#include <algorithm>
+#include <cmath>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -33,7 +33,7 @@ namespace creo {
         explicit ArchiCreoTableHandler(
             detail::RawTable table) noexcept :
             table_(table),
-            valid_(true) {
+            valid_(table != nullptr) {
         }
 
         [[nodiscard]] bool isValid() const noexcept {
@@ -42,6 +42,13 @@ namespace creo {
 
         [[nodiscard]] detail::RawTable raw() const noexcept {
             return table_;
+        }
+
+        void display() const {
+            requireTable();
+
+            CREO_CHECK(
+                detail::tableDisplay(&table_));
         }
 
         static ArchiCreoTableHandler create(
@@ -64,11 +71,14 @@ namespace creo {
 
             validateDimensions(rows, columns);
 
-            if (rowHeight <= 0.0) {
+            if (!std::isfinite(rowHeight) ||
+                rowHeight <= 0.0) {
                 throw std::invalid_argument(
                     "ArchiCreoTableHandler::create: "
-                    "row height must be greater than zero");
+                    "row height must be finite and greater than zero");
             }
+
+            validateOrigin(origin);
 
             const std::vector<double> widths =
                 normalizeColumnWidths(columns, columnWidths);
@@ -79,12 +89,18 @@ namespace creo {
 
             std::vector<ProHorzJust> justifications(
                 static_cast<std::size_t>(columns),
-                PRO_HORZ_JUSTIFY_LEFT);
+                PROHORZJUST_LEFT);
 
             detail::RawTableData data = nullptr;
 
             CREO_CHECK(
                 detail::tableDataAlloc(&data));
+
+            auto releaseData = Defer([&] {
+                if (data != nullptr) {
+                    (void)detail::tableDataFree(&data);
+                }
+            });
 
             detail::RawPoint3d tableOrigin{
                 origin[0],
@@ -96,10 +112,14 @@ namespace creo {
                     data,
                     tableOrigin));
 
+            // Keep the same setter order as the known working legacy
+            // implementation: columns, rows, then size type.
             CREO_CHECK(
-                detail::tableDataSizetypeSet(
+                detail::tableDataColumnsSet(
                     data,
-                    detail::kTableSizeCharacters));
+                    columns,
+                    widths.data(),
+                    justifications.data()));
 
             CREO_CHECK(
                 detail::tableDataRowsSet(
@@ -108,20 +128,25 @@ namespace creo {
                     rowHeights.data()));
 
             CREO_CHECK(
-                detail::tableDataColumnsSet(
+                detail::tableDataSizetypeSet(
                     data,
-                    columns,
-                    const_cast<double*>(widths.data()),
-                    justifications.data()));
+                    detail::kTableSizeCharacters));
 
             detail::RawTable table{};
 
+            // Do not repaint while the table is still being prepared.
             CREO_CHECK(
                 detail::tableCreate(
                     model.raw(),
                     data,
-                    PRO_B_TRUE,
+                    PRO_B_FALSE,
                     &table));
+
+            if (table == nullptr) {
+                throw std::runtime_error(
+                    "ArchiCreoTableHandler::create: "
+                    "Creo returned a null table handle");
+            }
 
             return ArchiCreoTableHandler(table);
         }
@@ -186,8 +211,11 @@ namespace creo {
                     cell.row);
             }
 
+            const int rows = rowCount();
+            const int columns = columnCount();
+
             std::vector<double> requiredWidths(
-                static_cast<std::size_t>(columnCount()),
+                static_cast<std::size_t>(columns),
                 static_cast<double>(kMinColumnWidth));
 
             for (const ArchiCreoTableCell& cell : cells) {
@@ -209,7 +237,7 @@ namespace creo {
             }
 
             for (int column = 1;
-                 column <= columnCount();
+                 column <= columns;
                  ++column) {
 
                 setColumnWidth(
@@ -219,6 +247,7 @@ namespace creo {
                             column - 1)]);
             }
 
+            (void)rows;
             for (const ArchiCreoTableCell& cell : cells) {
                 enterWrappedCellText(
                     cell.column,
@@ -244,11 +273,7 @@ namespace creo {
             }
 
             const double normalizedWidth =
-                width < static_cast<double>(kMinColumnWidth)
-                    ? static_cast<double>(kMinColumnWidth)
-                    : (width > static_cast<double>(kMaxColumnWidth)
-                        ? static_cast<double>(kMaxColumnWidth)
-                        : width);
+                normalizeColumnWidth(width);
 
             CREO_CHECK(
                 detail::tableColumnWidthSet(
@@ -322,11 +347,7 @@ namespace creo {
             const double normalizedWidth =
                 width < 0.0
                     ? width
-                    : width < static_cast<double>(kMinColumnWidth)
-                              ? static_cast<double>(kMinColumnWidth)
-                              : (width > static_cast<double>(kMaxColumnWidth)
-                                  ? static_cast<double>(kMaxColumnWidth)
-                                  : width);
+                    : normalizeColumnWidth(width);
 
             CREO_CHECK(
                 detail::tableColumnAdd(
@@ -380,6 +401,26 @@ namespace creo {
             }
         }
 
+        static double normalizeColumnWidth(
+            double width) {
+
+            if (!std::isfinite(width)) {
+                throw std::invalid_argument(
+                    "ArchiCreoTableHandler: "
+                    "column width must be finite");
+            }
+
+            if (width < static_cast<double>(kMinColumnWidth)) {
+                return static_cast<double>(kMinColumnWidth);
+            }
+
+            if (width > static_cast<double>(kMaxColumnWidth)) {
+                return static_cast<double>(kMaxColumnWidth);
+            }
+
+            return width;
+        }
+
         static std::vector<double> normalizeColumnWidths(
             int columns,
             const std::vector<double>& requestedWidths) {
@@ -403,15 +444,25 @@ namespace creo {
                 if (!requestedWidths.empty()) {
                     widths[
                         static_cast<std::size_t>(column)] =
-                        requestedWidths[static_cast<std::size_t>(column)] < static_cast<double>(kMinColumnWidth)
-                            ? static_cast<double>(kMinColumnWidth)
-                            : (requestedWidths[static_cast<std::size_t>(column)] > static_cast<double>(kMaxColumnWidth)
-                                ? static_cast<double>(kMaxColumnWidth)
-                                : requestedWidths[static_cast<std::size_t>(column)]);
+                        normalizeColumnWidth(
+                            requestedWidths[
+                                static_cast<std::size_t>(column)]);
                 }
             }
 
             return widths;
+        }
+
+        static void validateOrigin(
+            const detail::RawPoint3d& origin) {
+
+            for (int index = 0; index < 3; ++index) {
+                if (!std::isfinite(origin[index])) {
+                    throw std::invalid_argument(
+                        "ArchiCreoTableHandler::create: "
+                        "origin coordinates must be finite");
+                }
+            }
         }
 
         static std::size_t maxLineLength(
@@ -440,12 +491,10 @@ namespace creo {
             const std::wstring& text) const {
 
             const double requiredWidth =
-                static_cast<double>(
-                    maxLineLength(text) < static_cast<std::size_t>(kMinColumnWidth)
-                        ? static_cast<std::size_t>(kMinColumnWidth)
-                        : (maxLineLength(text) > static_cast<std::size_t>(kMaxColumnWidth)
-                            ? static_cast<std::size_t>(kMaxColumnWidth)
-                            : maxLineLength(text)));
+                normalizeColumnWidth(
+                    static_cast<double>(
+                        maxLineLength(
+                            normalizeLineBreaks(text))));
 
             double currentWidth =
                 static_cast<double>(kMinColumnWidth);
@@ -528,11 +577,7 @@ namespace creo {
                     detail::kTableSizeCharacters,
                     &width));
 
-            return width < static_cast<double>(kMinColumnWidth)
-                ? static_cast<double>(kMinColumnWidth)
-                : (width > static_cast<double>(kMaxColumnWidth)
-                    ? static_cast<double>(kMaxColumnWidth)
-                    : width);
+            return normalizeColumnWidth(width);
         }
 
         static std::wstring normalizeLineBreaks(
