@@ -426,6 +426,14 @@ namespace creo::detail {
         return ::ProDwgtabledataAlloc(p_data);
     }
 
+    inline ProErrorCode tableDataFree(RawTableData* p_data) {
+        if (p_data == nullptr || *p_data == nullptr) {
+            return kNoError;
+        }
+
+        return ::ProDwgtabledataFree(p_data);
+    }
+
     inline ProErrorCode tableDataOriginSet(
         RawTableData data, RawPoint3d origin) {
         return ::ProDwgtabledataOriginSet(data, origin);
@@ -479,6 +487,11 @@ namespace creo::detail {
         RawTableSizeType size_type) {
         return ::ProDwgtableColumnWidthSet(
             table, column, width, size_type);
+    }
+
+    inline ProErrorCode tableDisplay(
+        RawTable* table) {
+        return ::ProDwgtableDisplay(table);
     }
 
     inline ProErrorCode tableColumnWidthGet(
@@ -610,6 +623,14 @@ namespace creo::detail {
         return ::ProTableDataAlloc(p_data);
     }
 
+    inline ProErrorCode tableDataFree(RawTableData* p_data) {
+        if (p_data == nullptr || *p_data == nullptr) {
+            return kNoError;
+        }
+
+        return ::ProTableDataFree(p_data);
+    }
+
     inline ProErrorCode tableDataOriginSet(
         RawTableData data, RawPoint3d origin) {
         return ::ProTableDataOriginSet(data, origin);
@@ -656,6 +677,11 @@ namespace creo::detail {
         RawTableSizeType size_type) {
         return ::ProTableColumnWidthSet(
             table, column, width, size_type);
+    }
+
+    inline ProErrorCode tableDisplay(
+        RawTable* table) {
+        return ::ProTableDisplay(table, nullptr);
     }
 
     inline ProErrorCode tableColumnWidthGet(
