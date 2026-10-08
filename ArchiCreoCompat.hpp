@@ -3,10 +3,14 @@
 #include <ProArray.h>
 #include <ProAsmcomp.h>
 #include <ProAsmcomppath.h>
+#include <ProAnnotation.h>
+#include <ProDrawing.h>
 #include <ProAssembly.h>
 #include <ProCore.h>
 #include <ProMdl.h>
 #include <ProModelitem.h>
+#include <ProSelection.h>
+#include <ProView.h>
 #include <ProParameter.h>
 #include <ProParamval.h>
 #include <ProSolid.h>
@@ -46,6 +50,14 @@ namespace creo::detail {
     using RawMatrix = ::ProMatrix;
     using RawVector = ::ProVector;
     using RawPoint3d = ::ProPoint3d;
+    using RawDrawing = ::ProDrawing;
+    using RawAnnotation = ::ProAnnotation;
+    using RawAnnotationElem = ::ProAnnotationElem;
+    using RawView = ::ProView;
+    using RawSelection = ::ProSelection;
+    using RawAsmcompPath = ::ProAsmcomppath;
+    using RawAnnotationAttachmentAssociativity =
+        ::ProAnnotationAttachmentAssociativity;
 #if defined(CREO10)
     using RawTable = ::ProDwgtable;
     using RawTableData = ::ProDwgtabledata;
@@ -894,6 +906,173 @@ namespace creo::detail {
         // such as ProTableCelltextGet().
         return ::ProWstringproarrayFree(
             reinterpret_cast<wchar_t**>(p_array));
+    }
+
+    inline ProErrorCode annotationShow(
+        RawAnnotation* annotation,
+        RawAsmcompPath* comp_path,
+        RawView view) {
+        return ::ProAnnotationShow(
+            annotation,
+            comp_path,
+            view);
+    }
+
+    inline ProErrorCode annotationIsShown(
+        RawAnnotation* annotation,
+        RawDrawing drawing,
+        RawBoolean* is_shown) {
+        return ::ProAnnotationIsShown(
+            annotation,
+            drawing,
+            is_shown);
+    }
+
+    inline ProErrorCode annotationDisplay(
+        RawAnnotation* annotation,
+        RawAsmcompPath* comp_path,
+        RawDrawing drawing,
+        RawView view) {
+        return ::ProAnnotationDisplay(
+            annotation,
+            comp_path,
+            drawing,
+            view);
+    }
+
+    inline ProErrorCode annotationUndisplay(
+        RawAnnotation* annotation,
+        RawAsmcompPath* comp_path,
+        RawDrawing drawing) {
+        return ::ProAnnotationUndisplay(
+            annotation,
+            comp_path,
+            drawing);
+    }
+
+    inline ProErrorCode annotationElementGet(
+        RawAnnotation* annotation,
+        RawAnnotationElem* element) {
+        return ::ProAnnotationElementGet(
+            annotation,
+            element);
+    }
+
+    inline ProErrorCode annotationIsInactive(
+        RawAnnotation* annotation,
+        RawBoolean* is_inactive) {
+        return ::ProAnnotationIsInactive(
+            annotation,
+            is_inactive);
+    }
+
+    inline ProErrorCode annotationIsAssociative(
+        RawAnnotation* annotation,
+        RawDrawing drawing,
+        RawBoolean* assoc_position,
+        RawAnnotationAttachmentAssociativity* assoc_attach) {
+        return ::ProAnnotationIsAssociative(
+            annotation,
+            drawing,
+            assoc_position,
+            assoc_attach,
+            nullptr);
+    }
+
+    inline ProErrorCode annotationPositionUpdate(
+        RawAnnotation* annotation,
+        RawDrawing drawing) {
+        return ::ProAnnotationPositionUpdate(
+            annotation,
+            drawing);
+    }
+
+    inline ProErrorCode annotationAttachmentUpdate(
+        RawAnnotation* annotation,
+        RawDrawing drawing) {
+        return ::ProAnnotationAttachmentUpdate(
+            annotation,
+            drawing);
+    }
+
+    inline ProErrorCode annotationUpdate(
+        RawAnnotation* annotation,
+        RawDrawing drawing) {
+        return ::ProAnnotationUpdate(
+            annotation,
+            drawing);
+    }
+
+    inline ProErrorCode drawingAnnotationErase(
+        RawDrawing drawing,
+        RawAnnotation* annotation) {
+        return ::ProDrawingAnnotationErase(
+            drawing,
+            annotation);
+    }
+
+    inline ProErrorCode annotationByViewShow(
+        RawDrawing drawing,
+        RawView view,
+        RawObjectType annotation_type) {
+        return ::ProAnnotationByViewShow(
+            drawing,
+            view,
+            annotation_type);
+    }
+
+    inline ProErrorCode annotationByFeatureShow(
+        RawDrawing drawing,
+        RawSelection feature_selection,
+        RawView view,
+        RawObjectType annotation_type) {
+        return ::ProAnnotationByFeatureShow(
+            drawing,
+            feature_selection,
+            view,
+            annotation_type);
+    }
+
+    inline ProErrorCode annotationByComponentShow(
+        RawDrawing drawing,
+        RawSelection component_selection,
+        RawView view,
+        RawObjectType annotation_type) {
+        return ::ProAnnotationByComponentShow(
+            drawing,
+            component_selection,
+            view,
+            annotation_type);
+    }
+
+    inline ProErrorCode annotationNeedsConversion(
+        RawAnnotation* annotation,
+        RawBoolean* needs_conversion) {
+        return ::ProAnnotationNeedsConversion(
+            annotation,
+            needs_conversion);
+    }
+
+    inline ProErrorCode annotationLegacyConvert(
+        RawAnnotation* annotation) {
+        return ::ProAnnotationLegacyConvert(
+            annotation);
+    }
+
+    inline ProErrorCode annotationDesignateSet(
+        RawAnnotation* annotation,
+        ::ProDesignateType designate) {
+        return ::ProAnnotationDesignateSet(
+            annotation,
+            designate);
+    }
+
+    inline ProErrorCode annotationDesignateGet(
+        RawAnnotation* annotation,
+        ::ProDesignateType* designate) {
+        return ::ProAnnotationDesignateGet(
+            annotation,
+            designate);
     }
 
     inline ProErrorCode engineerConnectIdGet(
