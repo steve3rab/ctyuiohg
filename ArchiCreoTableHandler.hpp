@@ -52,6 +52,15 @@ namespace creo {
                 detail::tableDisplay(&table_));
         }
 
+        void update(
+            const detail::RawDrawing& drawing) const {
+            requireTable();
+
+            CREO_CHECK(
+                detail::drawingTablesUpdate(
+                    drawing));
+        }
+
         static ArchiCreoTableHandler create(
             const ArchiCreoModelHandler& model,
             int rows,
