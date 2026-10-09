@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cmath>
 #include <stdexcept>
 #include <string>
@@ -31,9 +32,9 @@ namespace creo {
         }
 
         explicit ArchiCreoTableHandler(
-            detail::RawTable table) noexcept :
+            const detail::RawTable& table) noexcept :
             table_(table),
-            valid_(table != nullptr) {
+            valid_(table.type == detail::kTableObjectType) {
         }
 
         [[nodiscard]] bool isValid() const noexcept {
