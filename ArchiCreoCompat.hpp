@@ -74,6 +74,14 @@ namespace creo::detail {
     using RawWstringProArray = ::ProWstring*;
 
 #if defined(CREO10)
+#if defined(CREO10)
+    inline constexpr RawObjectType kTableObjectType =
+        PRO_DRAW_TABLE;
+#elif defined(CREO13)
+    inline constexpr RawObjectType kTableObjectType =
+        PRO_TABLE;
+#endif
+
     inline constexpr RawTableSizeType kTableSizeCharacters =
         PRODWGTABLESIZE_CHARACTERS;
     inline constexpr RawTableSizeType kTableSizeCharsTrue =
