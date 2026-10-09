@@ -16,6 +16,7 @@
 #elif defined(CREO10)
 #include <ProDwgtable.h>
 #elif defined(CREO13)
+#include <ProDwgtable.h>
 #include <ProTable.h>
 #else
 #error "Define exactly one of CREO10 or CREO13 when building ArchiCreo"
@@ -64,7 +65,6 @@ namespace creo::detail {
     using RawWstringProArray = ::ProWstring*;
 
 #if defined(CREO10)
-#if defined(CREO10)
     inline constexpr RawObjectType kTableObjectType =
         PRO_DRAW_TABLE;
 #elif defined(CREO13)
@@ -72,6 +72,7 @@ namespace creo::detail {
         PRO_TABLE;
 #endif
 
+#if defined(CREO10)
     inline constexpr RawTableSizeType kTableSizeCharacters =
         PRODWGTABLESIZE_CHARACTERS;
     inline constexpr RawTableSizeType kTableSizeCharsTrue =
