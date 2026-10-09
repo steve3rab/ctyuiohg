@@ -531,6 +531,12 @@ namespace creo::detail {
             table, column, width, size_type);
     }
 
+    inline ProErrorCode drawingTablesUpdate(
+        RawDrawing drawing) {
+        return ::ProDrawingTablesUpdate(
+            drawing);
+    }
+
     inline ProErrorCode tableDisplay(
         RawTable* table) {
         return ::ProDwgtableDisplay(table);
