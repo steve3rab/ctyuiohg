@@ -5,6 +5,7 @@
 #include <ProAsmcomppath.h>
 #include <ProAssembly.h>
 #include <ProCore.h>
+#include <ProDrawing.h>
 #include <ProMdl.h>
 #include <ProModelitem.h>
 #include <ProParameter.h>
@@ -46,6 +47,7 @@ namespace creo::detail {
     using RawMatrix = ::ProMatrix;
     using RawVector = ::ProVector;
     using RawPoint3d = ::ProPoint3d;
+    using RawDrawing = ::ProDrawing;
 #if defined(CREO10)
     using RawTable = ::ProDwgtable;
     using RawTableData = ::ProDwgtabledata;
