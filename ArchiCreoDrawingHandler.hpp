@@ -3,8 +3,10 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include "ArchiCreoModelHandler.hpp"
+#include "ArchiCreoTableHandler.hpp"
 
 namespace creo {
 
@@ -102,6 +104,24 @@ namespace creo {
         [[nodiscard]] ModelInfo info() const {
             requireDrawing();
             return model_.info();
+        }
+
+        ArchiCreoTableHandler createTable(
+            int rows,
+            int columns,
+            const detail::RawPoint3d& origin,
+            double rowHeight = 1.0,
+            const std::vector<double>& columnWidths = {}) const {
+
+            requireDrawing();
+
+            return ArchiCreoTableHandler::create(
+                model_,
+                rows,
+                columns,
+                origin,
+                rowHeight,
+                columnWidths);
         }
 
         [[nodiscard]] ArchiCreoModelHandler model() const {
