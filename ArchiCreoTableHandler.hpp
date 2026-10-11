@@ -7,7 +7,6 @@
 #include <string>
 #include <vector>
 
-#include "ArchiCreoCompat.hpp"
 #include "ArchiCreoErrorHandler.hpp"
 #include "ArchiCreoModelHandler.hpp"
 #include "ArchiScopeGuard.hpp"
