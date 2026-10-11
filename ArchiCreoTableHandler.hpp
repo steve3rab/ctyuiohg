@@ -49,7 +49,7 @@ namespace creo {
             return table_;
         }
 
-        void display() const {
+        void display() {
             requireTable();
 
             CREO_CHECK(
@@ -163,7 +163,7 @@ namespace creo {
         void setCellText(
             int column,
             int row,
-            const std::wstring& text) const {
+            const std::wstring& text) {
 
             requireCell(column, row);
 
@@ -180,7 +180,7 @@ namespace creo {
         }
 
         void setCells(
-            const std::vector<ArchiCreoTableCell>& cells) const {
+            const std::vector<ArchiCreoTableCell>& cells) {
 
             requireTable();
 
@@ -297,7 +297,7 @@ namespace creo {
 
         void setColumnWidth(
             int column,
-            double width) const {
+            double width) {
 
             requireTable();
 
@@ -324,7 +324,7 @@ namespace creo {
             int startRow,
             int endColumn,
             int endRow,
-            bool display = true) const {
+            bool display = true) {
 
             requireCell(startColumn, startRow);
             requireCell(endColumn, endRow);
@@ -349,7 +349,7 @@ namespace creo {
         void addRow(
             int insertAfterRow,
             double height = -1.0,
-            bool display = true) const {
+            bool display = true) {
 
             requireTable();
 
@@ -370,7 +370,7 @@ namespace creo {
         void addColumn(
             int insertAfterColumn,
             double width = -1.0,
-            bool display = true) const {
+            bool display = true) {
 
             requireTable();
 
@@ -395,7 +395,7 @@ namespace creo {
 
         void deleteRow(
             int row,
-            bool display = true) const {
+            bool display = true) {
 
             requireCell(1, row);
 
@@ -408,7 +408,7 @@ namespace creo {
 
         void deleteColumn(
             int column,
-            bool display = true) const {
+            bool display = true) {
 
             requireCell(column, 1);
 
@@ -524,7 +524,7 @@ namespace creo {
 
         void setColumnWidthForText(
             int column,
-            const std::wstring& text) const {
+            const std::wstring& text) {
 
             const double requiredWidth =
                 normalizeColumnWidth(
@@ -751,7 +751,7 @@ namespace creo {
         }
 
         void enableRowAutoHeight(
-            int row) const {
+            int row) {
 
             CREO_CHECK(
                 detail::tableRowHeightAutoAdjustSet(
@@ -789,7 +789,7 @@ namespace creo {
             }
         }
 
-        mutable detail::RawTable table_;
+        detail::RawTable table_;
         bool valid_;
     };
 
