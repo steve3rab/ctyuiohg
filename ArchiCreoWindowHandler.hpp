@@ -89,7 +89,7 @@ namespace creo {
             auto free_raw_name = Defer([&] {
                 if (raw_name != nullptr) {
                     CREO_CHECK(
-                        detail::stringFree(raw_name));
+                        detail::stringFree(&raw_name));
                 }
             });
 
