@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ArchiCreoCompat.hpp"
+
 #include <optional>
 #include <stdexcept>
 #include <string>
