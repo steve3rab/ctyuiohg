@@ -87,15 +87,19 @@ namespace creo {
                 detail::windowNameGet(window_id_, &raw_name));
 
             auto free_raw_name = Defer([&] {
-                if (raw_name != nullptr) {
-                    CREO_CHECK(
-                        detail::stringFree(&raw_name));
-                }
+                (void)detail::stringFree(&raw_name);
             });
 
-            return raw_name == nullptr
-                ? std::string{}
-                : std::string(raw_name);
+            const std::string name =
+                raw_name == nullptr
+                    ? std::string{}
+                    : std::string(raw_name);
+
+            CREO_CHECK(
+                detail::stringFree(&raw_name));
+
+            free_raw_name.Dismiss();
+            return name;
         }
 
       private:
