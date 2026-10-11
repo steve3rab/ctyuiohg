@@ -127,7 +127,7 @@ namespace creo {
 
         [[nodiscard]] ArchiCreoAnnotationHandler
         annotation(
-            detail::RawAnnotation annotationHandle) const {
+            const detail::RawAnnotation& annotationHandle) const {
 
             requireDrawing();
 
