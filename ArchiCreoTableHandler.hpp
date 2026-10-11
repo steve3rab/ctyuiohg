@@ -24,8 +24,8 @@ namespace creo {
       public:
         static constexpr int kMinColumnWidth = 5;
         static constexpr int kMaxColumnWidth = 35;
-        static constexpr int kMaxRows = 100;
-        static constexpr int kMaxColumns = 50;
+        static constexpr int kMaxRows = detail::kMaxTableRows;
+        static constexpr int kMaxColumns = detail::kMaxTableColumns;
 
         ArchiCreoTableHandler() noexcept :
             table_{},
