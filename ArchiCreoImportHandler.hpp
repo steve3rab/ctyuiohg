@@ -38,6 +38,12 @@ namespace creo {
 
             detail::RawMdl importedModel = nullptr;
 
+            auto eraseOnFailure = Defer([&] {
+                if (importedModel != nullptr) {
+                    (void)detail::mdlErase(importedModel);
+                }
+            });
+
             CREO_CHECK(
                 detail::intfImportModelWithOptionsMdlnameCreate(
                     importPath,
@@ -55,12 +61,6 @@ namespace creo {
                     "ArchiCreoImportHandler::importStep: "
                     "Creo returned a null model handle");
             }
-
-            auto eraseOnFailure = Defer([&] {
-                if (importedModel != nullptr) {
-                    (void)detail::mdlErase(importedModel);
-                }
-            });
 
             ArchiCreoModelHandler result(importedModel);
 
@@ -100,6 +100,12 @@ namespace creo {
                 detail::ecadImpOptsAlloc(
                     &options));
 
+            if (options == nullptr) {
+                throw std::runtime_error(
+                    "ArchiCreoImportHandler::importEmn: "
+                    "Creo returned a null import-options handle");
+            }
+
             auto freeOptions = Defer([&] {
                 (void)detail::ecadImpOptsFree(
                     &options);
@@ -120,6 +126,12 @@ namespace creo {
 
             detail::RawMdl importedModel = nullptr;
 
+            auto eraseOnFailure = Defer([&] {
+                if (importedModel != nullptr) {
+                    (void)detail::mdlErase(importedModel);
+                }
+            });
+
             CREO_CHECK(
                 detail::ecadImport(
                     importPath,
@@ -132,12 +144,6 @@ namespace creo {
                     "ArchiCreoImportHandler::importEmn: "
                     "Creo returned a null assembly handle");
             }
-
-            auto eraseOnFailure = Defer([&] {
-                if (importedModel != nullptr) {
-                    (void)detail::mdlErase(importedModel);
-                }
-            });
 
             ArchiCreoModelHandler result(importedModel);
 
@@ -217,7 +223,8 @@ namespace creo {
                     "ArchiCreoImportHandler: empty model name");
             }
 
-            constexpr std::size_t maxModelNameLength = 31;
+            constexpr std::size_t maxModelNameLength =
+                static_cast<std::size_t>(PRO_NAME_SIZE - 1);
 
             if (modelName.size() > maxModelNameLength) {
                 throw std::invalid_argument(
