@@ -722,6 +722,12 @@ namespace creo {
             std::copy(model_name.begin(), model_name.end(), new_name);
 
             detail::RawMdl copied_model = nullptr;
+            auto erase_copied_model = Defer([&] {
+                if (copied_model != nullptr) {
+                    (void)detail::mdlErase(copied_model);
+                }
+            });
+
             CREO_CHECK(detail::mdlnameCopy(
                 source.raw(), new_name, &copied_model));
 
@@ -737,6 +743,8 @@ namespace creo {
                     std::string("ArchiCreoModelHandler::") + operation +
                     ": copied model has an unexpected Creo model type");
             }
+
+            erase_copied_model.Dismiss();
             return result;
         }
 
@@ -765,6 +773,11 @@ namespace creo {
                 name);
 
             detail::RawMdl new_model = nullptr;
+            auto erase_new_model = Defer([&] {
+                if (new_model != nullptr) {
+                    (void)detail::mdlErase(new_model);
+                }
+            });
 
             CREO_CHECK(
                 detail::mdlnameCopy(
@@ -790,6 +803,7 @@ namespace creo {
                     ": copied model has an unexpected type");
             }
 
+            erase_new_model.Dismiss();
             return result;
         }
 
@@ -832,6 +846,12 @@ namespace creo {
                 name);
 
             detail::RawSolid solid = nullptr;
+            auto erase_solid = Defer([&] {
+                if (solid != nullptr) {
+                    (void)detail::mdlErase(
+                        static_cast<detail::RawMdl>(solid));
+                }
+            });
 
             CREO_CHECK(
                 detail::solidMdlnameCreate(
@@ -866,6 +886,7 @@ namespace creo {
                     ": Creo returned an unexpected model type");
             }
 
+            erase_solid.Dismiss();
             return model;
         }
 
