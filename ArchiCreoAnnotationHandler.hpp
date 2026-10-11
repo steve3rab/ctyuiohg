@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <stdexcept>
 
 #include "ArchiCreoCompat.hpp"
@@ -21,7 +22,7 @@ namespace creo {
         }
 
         explicit ArchiCreoAnnotationHandler(
-            detail::RawAnnotation annotation) noexcept :
+            const detail::RawAnnotation& annotation) noexcept :
             annotation_(annotation),
             valid_(true) {
         }
@@ -178,6 +179,12 @@ namespace creo {
 
         void rotate(double rotation) const {
             requireAnnotation();
+
+            if (!std::isfinite(rotation)) {
+                throw std::invalid_argument(
+                    "ArchiCreoAnnotationHandler::rotate: "
+                    "rotation must be finite");
+            }
 
             CREO_CHECK(
                 detail::annotationRotate(
