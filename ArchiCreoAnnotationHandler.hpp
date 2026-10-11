@@ -40,7 +40,7 @@ namespace creo {
 
         void show(
             detail::RawView view,
-            detail::RawAsmcompPath* componentPath = nullptr) const {
+            detail::RawAsmcompPath* componentPath = nullptr) {
             requireAnnotation();
 
             CREO_CHECK(
@@ -51,7 +51,7 @@ namespace creo {
         }
 
         [[nodiscard]] bool isShown(
-            detail::RawDrawing drawing) const {
+            detail::RawDrawing drawing) {
             requireAnnotation();
 
             detail::RawBoolean shown = PRO_B_FALSE;
@@ -68,7 +68,7 @@ namespace creo {
         void display(
             detail::RawDrawing drawing,
             detail::RawView view,
-            detail::RawAsmcompPath* componentPath = nullptr) const {
+            detail::RawAsmcompPath* componentPath = nullptr) {
             requireAnnotation();
 
             CREO_CHECK(
@@ -81,7 +81,7 @@ namespace creo {
 
         void undisplay(
             detail::RawDrawing drawing,
-            detail::RawAsmcompPath* componentPath = nullptr) const {
+            detail::RawAsmcompPath* componentPath = nullptr) {
             requireAnnotation();
 
             CREO_CHECK(
@@ -92,7 +92,7 @@ namespace creo {
         }
 
         void eraseFromDrawing(
-            detail::RawDrawing drawing) const {
+            detail::RawDrawing drawing) {
             requireAnnotation();
 
             CREO_CHECK(
@@ -180,7 +180,7 @@ namespace creo {
             return result;
         }
 
-        void rotate(double rotation) const {
+        void rotate(double rotation) {
             requireAnnotation();
 
             if (!std::isfinite(rotation)) {
@@ -209,7 +209,7 @@ namespace creo {
             return conversionRequired == PRO_B_TRUE;
         }
 
-        void convertLegacy() const {
+        void convertLegacy() {
             requireAnnotation();
 
             CREO_CHECK(
@@ -217,7 +217,7 @@ namespace creo {
                     &annotation_));
         }
 
-        void convertLegacyIfNeeded() const {
+        void convertLegacyIfNeeded() {
             if (!needsConversion()) {
                 return;
             }
@@ -226,7 +226,7 @@ namespace creo {
         }
 
         void setDesignate(
-            ::ProDesignateType designate) const {
+            ::ProDesignateType designate) {
             requireAnnotation();
 
             CREO_CHECK(
