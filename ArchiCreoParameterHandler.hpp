@@ -1,6 +1,8 @@
 #pragma once
 
 
+#include "ArchiCreoCompat.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <stdexcept>
@@ -8,8 +10,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-#include "ArchiCreoCompat.hpp"
 #include "ArchiCreoErrorHandler.hpp"
 #include "ArchiCreoModelHandler.hpp"
 
