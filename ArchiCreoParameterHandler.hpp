@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cwchar>
+#include <algorithm>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -160,9 +160,12 @@ namespace creo {
 
             const ParameterType currentType =
                 parameterType(current.type);
+
+            detail::RawParamValue newValue =
+                makeParameterValue(value);
+
             const ParameterType newType =
-                parameterType(
-                    makeParameterValue(value).type);
+                parameterType(newValue.type);
 
             if (currentType != newType) {
                 throw std::invalid_argument(
@@ -183,9 +186,6 @@ namespace creo {
                     "ArchiCreoParameterHandler::set: "
                     "parameter is locked");
             }
-
-            detail::RawParamValue newValue =
-                makeParameterValue(value);
 
             CREO_CHECK(
                 detail::parameterValueSet(
@@ -237,11 +237,11 @@ namespace creo {
                     "parameter name is too long");
             }
 
-            std::wcsncpy(
-                destination,
-                source.c_str(),
-                PRO_NAME_SIZE - 1);
-            destination[PRO_NAME_SIZE - 1] = L'\0';
+            std::copy(
+                source.begin(),
+                source.end(),
+                destination);
+            destination[source.size()] = L'\0';
         }
 
         bool initializeParameter(
