@@ -506,13 +506,18 @@ namespace creo::detail {
             data, columns, widths, justifications);
     }
 
+    inline RawDrawing mdlToDrawing(
+        RawMdl model) {
+        return reinterpret_cast<RawDrawing>(model);
+    }
+
     inline ProErrorCode tableCreate(
-        RawMdl model,
+        RawDrawing drawing,
         RawTableData data,
         RawBoolean display,
         RawTable* p_table) {
         return ::ProDrawingTableCreate(
-            reinterpret_cast<ProDrawing>(model),
+            drawing,
             data,
             display,
             p_table);
@@ -701,7 +706,7 @@ namespace creo::detail {
         RawBoolean display,
         RawTable* p_table) {
         return ::ProTableCreate(
-            model, data, display, p_table);
+            drawing, data, display, p_table);
     }
 
     inline ProErrorCode tableRowsColumnsCount(
