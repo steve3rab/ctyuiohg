@@ -8,6 +8,7 @@
 #include <ProAssembly.h>
 #include <ProCore.h>
 #include <ProMdl.h>
+#include <ProObjects.h>
 #include <ProModelitem.h>
 #include <ProSelection.h>
 #include <ProView.h>
