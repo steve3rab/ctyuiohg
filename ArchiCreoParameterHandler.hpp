@@ -231,7 +231,8 @@ namespace creo {
         static void copyName(
             const std::wstring& source,
             detail::RawName destination) {
-            if (source.size() >= PRO_NAME_SIZE) {
+            if (source.size() >=
+                static_cast<std::size_t>(PRO_NAME_SIZE)) {
                 throw std::invalid_argument(
                     "ArchiCreoParameterHandler: "
                     "parameter name is too long");
