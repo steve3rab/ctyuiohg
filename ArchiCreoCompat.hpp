@@ -7,11 +7,13 @@
 #include <ProAsmcomppath.h>
 #include <ProAnnotation.h>
 #include <ProDrawing.h>
+#include <ProEcadUtils.h>
 #include <ProAssembly.h>
 #include <ProCore.h>
 #include <ProMdl.h>
 #include <ProObjects.h>
 #include <ProModelitem.h>
+#include <ProIntfimport.h>
 #include <ProSelection.h>
 #include <ProView.h>
 #include <ProParameter.h>
@@ -60,6 +62,10 @@ namespace creo::detail {
     using RawAsmcompPath = ::ProAsmcomppath;
     using RawAnnotationAttachmentAssociativity =
         ::ProAnnotationAttachmentAssociativity;
+    using RawIntfImportType = ::ProIntfImportType;
+    using RawImportRepType = ::ProImportRepType;
+    using RawEcadType = ::ProTKEcadType;
+    using RawEcadImpOpts = ::ProEcadImpOpts;
 #if defined(CREO10)
     using RawTable = ::ProDwgtable;
     using RawTableData = ::ProDwgtabledata;
@@ -480,6 +486,87 @@ namespace creo::detail {
         return ::ProDirectoryCurrentGet(path);
     }
 
+
+    inline ProErrorCode intfImportModelWithOptionsMdlnameCreate(
+        RawPath import_file,
+        RawPath profile,
+        RawIntfImportType type,
+        RawMdlType create_type,
+        RawImportRepType rep_type,
+        RawMdlName new_model_name,
+        ::ProIntfimportLayerFilter filter_func,
+        ::ProAppData application_data,
+        RawMdl* created_model) {
+        return ::ProIntfimportModelWithOptionsMdlnameCreate(
+            import_file,
+            profile,
+            type,
+            create_type,
+            rep_type,
+            new_model_name,
+            filter_func,
+            application_data,
+            created_model);
+    }
+
+    inline ProErrorCode ecadImport(
+        RawPath filename,
+        RawEcadImpOpts options,
+        RawEcadType ecad_type,
+        RawMdl* new_model) {
+        return ::ProEcadImport(
+            filename,
+            options,
+            ecad_type,
+            new_model);
+    }
+
+    inline ProErrorCode ecadImpOptsAlloc(
+        RawEcadImpOpts* p_options) {
+        return ::ProEcadImpOptsAlloc(
+            p_options);
+    }
+
+    inline ProErrorCode ecadImpOptsFree(
+        RawEcadImpOpts* p_options) {
+        if (p_options == nullptr ||
+            *p_options == nullptr) {
+            return kNoError;
+        }
+
+        const ProErrorCode status =
+            ::ProEcadImpOptsFree(p_options);
+
+        if (status == kNoError) {
+            *p_options = nullptr;
+        }
+
+        return status;
+    }
+
+    inline ProErrorCode ecadImpOptsFlexDesignSet(
+        RawEcadImpOpts options,
+        RawBoolean flex_design) {
+        return ::ProEcadImpOptsFlexDesignSet(
+            options,
+            flex_design);
+    }
+
+    inline ProErrorCode ecadImpOptsIDF3EmpFileNameSet(
+        RawEcadImpOpts options,
+        RawPath idf_emp_filename) {
+        return ::ProEcadImpOptsIDF3EmpFileNameSet(
+            options,
+            idf_emp_filename);
+    }
+
+    inline ProErrorCode ecadImpOptsIDF3ImpOtherOutlineSet(
+        RawEcadImpOpts options,
+        RawBoolean import_other_outline) {
+        return ::ProEcadImpOptsIDF3ImpOtherOutlineSet(
+            options,
+            import_other_outline);
+    }
 
 #if defined(CREO10)
 
