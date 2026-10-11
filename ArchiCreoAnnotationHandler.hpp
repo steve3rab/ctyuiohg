@@ -1,10 +1,9 @@
 #pragma once
 
+#include "ArchiCreoCompat.hpp"
 
 #include <cmath>
 #include <stdexcept>
-
-#include "ArchiCreoCompat.hpp"
 #include "ArchiCreoErrorHandler.hpp"
 
 namespace creo {
