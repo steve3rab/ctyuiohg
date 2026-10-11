@@ -620,7 +620,10 @@ namespace creo {
                     template_path.u8string());
             }
 
-            if (template_path.extension() != expected_extension) {
+            const std::filesystem::path expected_extension_path(
+                expected_extension);
+
+            if (template_path.extension() != expected_extension_path) {
                 throw std::invalid_argument(
                     std::string(
                         "ArchiCreoModelHandler::") +
