@@ -1,10 +1,10 @@
 #pragma once
 
 
+#include "ArchiCreoCompat.hpp"
+
 #include <stdexcept>
 #include <string>
-
-#include "ArchiCreoCompat.hpp"
 #include "ArchiCreoErrorHandler.hpp"
 #include "ArchiScopeGuard.hpp"
 
