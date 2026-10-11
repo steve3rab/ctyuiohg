@@ -481,21 +481,6 @@ namespace creo::detail {
         return ::ProDwgtabledataAlloc(p_data);
     }
 
-    inline ProErrorCode tableDataFree(RawTableData* p_data) {
-        if (p_data == nullptr || *p_data == nullptr) {
-            return kNoError;
-        }
-
-        const ProErrorCode status =
-            ::ProDwgtabledataFree(p_data);
-
-        if (status == kNoError) {
-            *p_data = nullptr;
-        }
-
-        return status;
-    }
-
     inline ProErrorCode tableDataOriginSet(
         RawTableData data, RawPoint3d origin) {
         return ::ProDwgtabledataOriginSet(data, origin);
@@ -683,21 +668,6 @@ namespace creo::detail {
 
     inline ProErrorCode tableDataAlloc(RawTableData* p_data) {
         return ::ProTableDataAlloc(p_data);
-    }
-
-    inline ProErrorCode tableDataFree(RawTableData* p_data) {
-        if (p_data == nullptr || *p_data == nullptr) {
-            return kNoError;
-        }
-
-        const ProErrorCode status =
-            ::ProTableDataFree(p_data);
-
-        if (status == kNoError) {
-            *p_data = nullptr;
-        }
-
-        return status;
     }
 
     inline ProErrorCode tableDataOriginSet(
