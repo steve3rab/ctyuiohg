@@ -24,7 +24,10 @@ namespace creo {
         explicit ArchiCreoAnnotationHandler(
             const detail::RawAnnotation& annotation) noexcept :
             annotation_(annotation),
-            valid_(true) {
+            valid_(
+                annotation.type != PRO_TYPE_UNUSED &&
+                annotation.id > 0 &&
+                annotation.owner != nullptr) {
         }
 
         [[nodiscard]] bool isValid() const noexcept {
