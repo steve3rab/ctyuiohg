@@ -39,12 +39,6 @@ namespace creo::detail {
     using RawArray = ::ProArray;
     using RawBoolean = ::ProBoolean;
     using RawModelItem = ::ProModelitem;
-    using RawIntfImportType = ::ProIntfImportType;
-    using RawImportRepType = ::ProImportRepType;
-    using RawIntfImportLayerFilter = ::ProIntfimportLayerFilter;
-    using RawAppData = ::ProAppData;
-    using RawEcadType = ::ProTKEcadType;
-    using RawEcadImpOpts = ::ProEcadImpOpts;
     using RawParameter = ::ProParameter;
     using RawParamValue = ::ProParamvalue;
     using RawParamValueType = ::ProParamvalueType;
@@ -70,6 +64,8 @@ namespace creo::detail {
         ::ProAnnotationAttachmentAssociativity;
     using RawIntfImportType = ::ProIntfImportType;
     using RawImportRepType = ::ProImportRepType;
+    using RawIntfImportLayerFilter = ::ProIntfimportLayerFilter;
+    using RawAppData = ::ProAppData;
     using RawEcadType = ::ProTKEcadType;
     using RawEcadImpOpts = ::ProEcadImpOpts;
 #if defined(CREO10)
@@ -804,7 +800,7 @@ namespace creo::detail {
         RawBoolean display,
         RawTable* p_table) {
         return ::ProTableCreate(
-            drawing, data, display, p_table);
+            model, data, display, p_table);
     }
 
     inline ProErrorCode tableRowsColumnsCount(
