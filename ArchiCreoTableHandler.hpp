@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ArchiCreoCompat.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <cmath>
