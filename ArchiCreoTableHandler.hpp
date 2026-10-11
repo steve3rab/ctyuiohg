@@ -98,12 +98,6 @@ namespace creo {
             CREO_CHECK(
                 detail::tableDataAlloc(&data));
 
-            auto releaseData = Defer([&] {
-                if (data != nullptr) {
-                    (void)detail::tableDataFree(&data);
-                }
-            });
-
             detail::RawPoint3d tableOrigin{
                 origin[0],
                 origin[1],
@@ -143,13 +137,6 @@ namespace creo {
                     data,
                     PRO_B_FALSE,
                     &table));
-
-            // Pro*TableDataFree() is the documented owner-side cleanup
-            // for the data allocated by Pro*TableDataAlloc().
-            CREO_CHECK(
-                detail::tableDataFree(&data));
-
-            releaseData.Dismiss();
 
             if (table == nullptr) {
                 throw std::runtime_error(
