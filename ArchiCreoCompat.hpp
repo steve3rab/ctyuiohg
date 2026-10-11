@@ -97,6 +97,11 @@ namespace creo::detail {
             PROTBLROWHEIGHT_AUTOADJUST_TRUE;
 #endif
 
+    inline constexpr int kMaxTableColumns =
+        PRO_TABLE_MAX_COLS;
+    inline constexpr int kMaxTableRows =
+        PRO_TABLE_MAX_ROWS;
+
     inline constexpr RawBoolean kBooleanFalse = PRO_B_FALSE;
     inline constexpr RawBoolean kBooleanTrue = PRO_B_TRUE;
     inline constexpr ProErrorCode kNoError = PRO_TK_NO_ERROR;
