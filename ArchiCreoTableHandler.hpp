@@ -35,7 +35,10 @@ namespace creo {
         explicit ArchiCreoTableHandler(
             const detail::RawTable& table) noexcept :
             table_(table),
-            valid_(table.type == detail::kTableObjectType) {
+            valid_(
+                table.type == detail::kTableObjectType &&
+                table.id > 0 &&
+                table.owner != nullptr) {
         }
 
         [[nodiscard]] bool isValid() const noexcept {
