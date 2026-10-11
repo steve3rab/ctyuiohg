@@ -90,16 +90,9 @@ namespace creo {
                 (void)detail::stringFree(&raw_name);
             });
 
-            const std::string name =
-                raw_name == nullptr
-                    ? std::string{}
-                    : std::string(raw_name);
-
-            CREO_CHECK(
-                detail::stringFree(&raw_name));
-
-            free_raw_name.Dismiss();
-            return name;
+            return raw_name == nullptr
+                ? std::string{}
+                : std::string(raw_name);
         }
 
       private:
