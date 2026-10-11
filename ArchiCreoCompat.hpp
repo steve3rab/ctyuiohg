@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ProToolkit.h>
+
 #include <ProArray.h>
 #include <ProAsmcomp.h>
 #include <ProAsmcomppath.h>
@@ -24,7 +26,6 @@
 #else
 #error "Define exactly one of CREO10 or CREO13 when building ArchiCreo"
 #endif
-#include <ProToolkit.h>
 #include <ProUtil.h>
 #include <ProWindows.h>
 
@@ -167,7 +168,7 @@ namespace creo::detail {
     }
 
     inline ProErrorCode paramvalueTypeGet(
-        const RawParamValue* p_handle,
+        RawParamValue* p_handle,
         RawParamValueType* p_type) {
         return ::ProParamvalueTypeGet(p_handle, p_type);
     }
