@@ -19,7 +19,6 @@
 #elif defined(CREO10)
 #include <ProDwgtable.h>
 #elif defined(CREO13)
-#include <ProDwgtable.h>
 #include <ProTable.h>
 #else
 #error "Define exactly one of CREO10 or CREO13 when building ArchiCreo"
@@ -394,8 +393,19 @@ namespace creo::detail {
         return static_cast<RawSolid>(model);
     }
 
-    inline ProErrorCode stringFree(char* string) {
-        return ::ProStringFree(string);
+    inline ProErrorCode stringFree(char** p_string) {
+        if (p_string == nullptr || *p_string == nullptr) {
+            return kNoError;
+        }
+
+        const ProErrorCode status =
+            ::ProStringFree(*p_string);
+
+        if (status == kNoError) {
+            *p_string = nullptr;
+        }
+
+        return status;
     }
 
     inline ProErrorCode windowCurrentGet(int* p_window_id) {
@@ -909,8 +919,15 @@ namespace creo::detail {
 
         // Use this only for wide-string arrays returned by Creo TOOLKIT,
         // such as ProTableCelltextGet().
-        return ::ProWstringproarrayFree(
-            reinterpret_cast<wchar_t**>(p_array));
+        const ProErrorCode status =
+            ::ProWstringproarrayFree(
+                reinterpret_cast<wchar_t**>(p_array));
+
+        if (status == kNoError) {
+            *p_array = nullptr;
+        }
+
+        return status;
     }
 
     inline ProErrorCode annotationShow(
