@@ -1,14 +1,15 @@
 #pragma once
 
+#include <ProToolkit.h>
+
 #include <stdexcept>
 #include <string>
 #include <string_view>
 
-#include "ArchiCreoCompat.hpp"
 
 namespace creo {
 
-    using ErrorCode = detail::ProErrorCode;
+    using ErrorCode = ::ProError;
 
     class ProToolkitError : public std::runtime_error {
       public:
@@ -25,7 +26,7 @@ namespace creo {
     std::string toString(ErrorCode code);
 
     inline void throwIfError(ErrorCode code, std::string_view context = {}) {
-        if (code != detail::kNoError) {
+        if (code != PRO_TK_NO_ERROR) {
             throw ProToolkitError(code, context);
         }
     }
