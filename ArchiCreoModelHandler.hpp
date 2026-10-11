@@ -8,8 +8,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-
-#include "ArchiCreoCompat.hpp"
 #include "ArchiCreoErrorHandler.hpp"
 #include "ArchiCreoSolidHandler.hpp"
 #include "ArchiCreoWindowHandler.hpp"
