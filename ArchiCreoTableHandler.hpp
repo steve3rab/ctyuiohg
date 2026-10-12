@@ -135,12 +135,9 @@ namespace creo {
             detail::RawTable table{};
 
             // Do not repaint while the table is still being prepared.
-            const detail::RawDrawing drawing =
-                detail::mdlToDrawing(model.raw());
-
             CREO_CHECK(
                 detail::tableCreate(
-                    drawing,
+                    model.raw(),
                     data,
                     PRO_B_FALSE,
                     &table));
