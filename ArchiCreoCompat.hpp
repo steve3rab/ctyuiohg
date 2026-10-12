@@ -66,6 +66,8 @@ namespace creo::detail {
     using RawImportRepType = ::ProImportRepType;
     using RawIntfImportLayerFilter = ::ProIntfimportLayerFilter;
     using RawAppData = ::ProAppData;
+    using RawSolidDispCompVisitAction = ::ProSolidDispCompVisitAction;
+    using RawSolidDispCompFilterAction = ::ProSolidDispCompFilterAction;
     using RawEcadType = ::ProTKEcadType;
     using RawEcadImpOpts = ::ProEcadImpOpts;
 #if defined(CREO10)
@@ -406,8 +408,8 @@ namespace creo::detail {
 
     inline ProErrorCode solidDispCompVisit(
         RawSolid handle,
-        ::ProSolidDispCompVisitAction visit_action,
-        ::ProSolidDispCompFilterAction filter_action,
+        RawSolidDispCompVisitAction visit_action,
+        RawSolidDispCompFilterAction filter_action,
         RawAppData app_data) {
         return ::ProSolidDispCompVisit(
             handle,
