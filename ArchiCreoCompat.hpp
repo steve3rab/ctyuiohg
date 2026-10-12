@@ -1045,7 +1045,7 @@ namespace creo::detail {
         RawAnnotation* annotation,
         RawAnnotationElem* element) {
         return ::ProAnnotationElementGet(
-            const_cast<RawAnnotation*>(annotation),
+            annotation,
             element);
     }
 
@@ -1053,7 +1053,7 @@ namespace creo::detail {
         RawAnnotation* annotation,
         RawBoolean* is_inactive) {
         return ::ProAnnotationIsInactive(
-            const_cast<RawAnnotation*>(annotation),
+            annotation,
             is_inactive);
     }
 
@@ -1071,7 +1071,7 @@ namespace creo::detail {
         RawBoolean* assoc_position,
         RawAnnotationAttachmentAssociativity* assoc_attach) {
         return ::ProAnnotationIsAssociative(
-            const_cast<RawAnnotation*>(annotation),
+            annotation,
             drawing,
             assoc_position,
             assoc_attach,
@@ -1148,7 +1148,7 @@ namespace creo::detail {
         RawAnnotation* annotation,
         RawBoolean* needs_conversion) {
         return ::ProAnnotationNeedsConversion(
-            const_cast<RawAnnotation*>(annotation),
+            annotation,
             needs_conversion);
     }
 
