@@ -131,7 +131,7 @@ namespace creo {
                     drawing));
         }
 
-        [[nodiscard]] bool isInactive() const {
+        [[nodiscard]] bool isInactive() {
             requireAnnotation();
 
             detail::RawBoolean inactive = PRO_B_FALSE;
@@ -146,7 +146,7 @@ namespace creo {
 
         [[nodiscard]] ArchiCreoAnnotationAssociativity
         associativity(
-            detail::RawDrawing drawing) const {
+            detail::RawDrawing drawing) {
             requireAnnotation();
 
             detail::RawBoolean associatedPosition = PRO_B_FALSE;
@@ -168,7 +168,7 @@ namespace creo {
             return result;
         }
 
-        detail::RawAnnotationElem element() const {
+        detail::RawAnnotationElem element() {
             requireAnnotation();
 
             detail::RawAnnotationElem result{};
@@ -195,7 +195,7 @@ namespace creo {
                     rotation));
         }
 
-        [[nodiscard]] bool needsConversion() const {
+        [[nodiscard]] bool needsConversion() {
             requireAnnotation();
 
             detail::RawBoolean conversionRequired =
@@ -225,29 +225,6 @@ namespace creo {
             convertLegacy();
         }
 
-        void setDesignate(
-            ::ProDesignateType designate) {
-            requireAnnotation();
-
-            CREO_CHECK(
-                detail::annotationDesignateSet(
-                    &annotation_,
-                    designate));
-        }
-
-        [[nodiscard]] ::ProDesignateType designate() const {
-            requireAnnotation();
-
-            ::ProDesignateType designate =
-                PRO_DESIGNATE_NONE;
-
-            CREO_CHECK(
-                detail::annotationDesignateGet(
-                    &annotation_,
-                    &designate));
-
-            return designate;
-        }
 
         static void showByView(
             detail::RawDrawing drawing,
