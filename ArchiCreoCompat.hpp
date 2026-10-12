@@ -1010,11 +1010,11 @@ namespace creo::detail {
     }
 
     inline ProErrorCode annotationIsShown(
-        RawAnnotation* annotation,
+        const RawAnnotation* annotation,
         RawDrawing drawing,
         RawBoolean* is_shown) {
         return ::ProAnnotationIsShown(
-            annotation,
+            const_cast<RawAnnotation*>(annotation),
             drawing,
             is_shown);
     }
@@ -1042,18 +1042,18 @@ namespace creo::detail {
     }
 
     inline ProErrorCode annotationElementGet(
-        RawAnnotation* annotation,
+        const RawAnnotation* annotation,
         RawAnnotationElem* element) {
         return ::ProAnnotationElementGet(
-            annotation,
+            const_cast<RawAnnotation*>(annotation),
             element);
     }
 
     inline ProErrorCode annotationIsInactive(
-        RawAnnotation* annotation,
+        const RawAnnotation* annotation,
         RawBoolean* is_inactive) {
         return ::ProAnnotationIsInactive(
-            annotation,
+            const_cast<RawAnnotation*>(annotation),
             is_inactive);
     }
 
@@ -1066,12 +1066,12 @@ namespace creo::detail {
     }
 
     inline ProErrorCode annotationIsAssociative(
-        RawAnnotation* annotation,
+        const RawAnnotation* annotation,
         RawDrawing drawing,
         RawBoolean* assoc_position,
         RawAnnotationAttachmentAssociativity* assoc_attach) {
         return ::ProAnnotationIsAssociative(
-            annotation,
+            const_cast<RawAnnotation*>(annotation),
             drawing,
             assoc_position,
             assoc_attach,
@@ -1145,10 +1145,10 @@ namespace creo::detail {
     }
 
     inline ProErrorCode annotationNeedsConversion(
-        RawAnnotation* annotation,
+        const RawAnnotation* annotation,
         RawBoolean* needs_conversion) {
         return ::ProAnnotationNeedsConversion(
-            annotation,
+            const_cast<RawAnnotation*>(annotation),
             needs_conversion);
     }
 
@@ -1167,10 +1167,10 @@ namespace creo::detail {
     }
 
     inline ProErrorCode annotationDesignateGet(
-        RawAnnotation* annotation,
+        const RawAnnotation* annotation,
         ::ProDesignateType* designate) {
         return ::ProAnnotationDesignateGet(
-            annotation,
+            const_cast<RawAnnotation*>(annotation),
             designate);
     }
 
