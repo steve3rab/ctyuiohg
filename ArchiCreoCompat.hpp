@@ -1010,11 +1010,11 @@ namespace creo::detail {
     }
 
     inline ProErrorCode annotationIsShown(
-        const RawAnnotation* annotation,
+        RawAnnotation* annotation,
         RawDrawing drawing,
         RawBoolean* is_shown) {
         return ::ProAnnotationIsShown(
-            const_cast<RawAnnotation*>(annotation),
+            annotation,
             drawing,
             is_shown);
     }
@@ -1042,7 +1042,7 @@ namespace creo::detail {
     }
 
     inline ProErrorCode annotationElementGet(
-        const RawAnnotation* annotation,
+        RawAnnotation* annotation,
         RawAnnotationElem* element) {
         return ::ProAnnotationElementGet(
             const_cast<RawAnnotation*>(annotation),
@@ -1050,7 +1050,7 @@ namespace creo::detail {
     }
 
     inline ProErrorCode annotationIsInactive(
-        const RawAnnotation* annotation,
+        RawAnnotation* annotation,
         RawBoolean* is_inactive) {
         return ::ProAnnotationIsInactive(
             const_cast<RawAnnotation*>(annotation),
@@ -1066,7 +1066,7 @@ namespace creo::detail {
     }
 
     inline ProErrorCode annotationIsAssociative(
-        const RawAnnotation* annotation,
+        RawAnnotation* annotation,
         RawDrawing drawing,
         RawBoolean* assoc_position,
         RawAnnotationAttachmentAssociativity* assoc_attach) {
@@ -1145,7 +1145,7 @@ namespace creo::detail {
     }
 
     inline ProErrorCode annotationNeedsConversion(
-        const RawAnnotation* annotation,
+        RawAnnotation* annotation,
         RawBoolean* needs_conversion) {
         return ::ProAnnotationNeedsConversion(
             const_cast<RawAnnotation*>(annotation),
@@ -1158,21 +1158,6 @@ namespace creo::detail {
             annotation);
     }
 
-    inline ProErrorCode annotationDesignateSet(
-        RawAnnotation* annotation,
-        ::ProDesignateType designate) {
-        return ::ProAnnotationDesignateSet(
-            annotation,
-            designate);
-    }
-
-    inline ProErrorCode annotationDesignateGet(
-        const RawAnnotation* annotation,
-        ::ProDesignateType* designate) {
-        return ::ProAnnotationDesignateGet(
-            const_cast<RawAnnotation*>(annotation),
-            designate);
-    }
 
     inline ProErrorCode engineerConnectIdGet(
         char* connect_id) {
