@@ -600,16 +600,14 @@ namespace creo::detail {
             data, columns, widths, justifications);
     }
 
-    inline RawDrawing mdlToDrawing(
-        RawMdl model) {
-        return reinterpret_cast<RawDrawing>(model);
-    }
-
     inline ProErrorCode tableCreate(
-        RawDrawing drawing,
+        RawMdl model,
         RawTableData data,
         RawBoolean display,
         RawTable* p_table) {
+        const RawDrawing drawing =
+            reinterpret_cast<RawDrawing>(model);
+
         return ::ProDrawingTableCreate(
             drawing,
             data,
