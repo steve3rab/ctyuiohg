@@ -404,6 +404,18 @@ namespace creo::detail {
         return ::ProSolidRegenerate(solid, flags);
     }
 
+    inline ProErrorCode solidDispCompVisit(
+        RawSolid handle,
+        ::ProSolidDispCompVisitAction visit_action,
+        ::ProSolidDispCompFilterAction filter_action,
+        RawAppData app_data) {
+        return ::ProSolidDispCompVisit(
+            handle,
+            visit_action,
+            filter_action,
+            app_data);
+    }
+
     inline RawSolid mdlToSolid(RawMdl model) {
         return static_cast<RawSolid>(model);
     }
