@@ -102,7 +102,7 @@ namespace creo {
         }
 
         void update(
-            detail::RawDrawing drawing) const {
+            detail::RawDrawing drawing) {
             requireAnnotation();
 
             CREO_CHECK(
@@ -112,7 +112,7 @@ namespace creo {
         }
 
         void updatePosition(
-            detail::RawDrawing drawing) const {
+            detail::RawDrawing drawing) {
             requireAnnotation();
 
             CREO_CHECK(
@@ -122,7 +122,7 @@ namespace creo {
         }
 
         void updateAttachment(
-            detail::RawDrawing drawing) const {
+            detail::RawDrawing drawing) {
             requireAnnotation();
 
             CREO_CHECK(
