@@ -1,9 +1,10 @@
 #pragma once
 
-#include <stdexcept>
-#include <string>
 
 #include "ArchiCreoCompat.hpp"
+
+#include <stdexcept>
+#include <string>
 #include "ArchiCreoErrorHandler.hpp"
 #include "ArchiScopeGuard.hpp"
 
@@ -87,10 +88,7 @@ namespace creo {
                 detail::windowNameGet(window_id_, &raw_name));
 
             auto free_raw_name = Defer([&] {
-                if (raw_name != nullptr) {
-                    CREO_CHECK(
-                        detail::stringFree(raw_name));
-                }
+                (void)detail::stringFree(&raw_name);
             });
 
             return raw_name == nullptr

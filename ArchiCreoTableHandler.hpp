@@ -1,12 +1,14 @@
 #pragma once
 
+#include "ArchiCreoCompat.hpp"
+
 #include <algorithm>
+#include <cstddef>
 #include <cmath>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
-#include "ArchiCreoCompat.hpp"
 #include "ArchiCreoErrorHandler.hpp"
 #include "ArchiCreoModelHandler.hpp"
 #include "ArchiScopeGuard.hpp"
@@ -23,8 +25,8 @@ namespace creo {
       public:
         static constexpr int kMinColumnWidth = 5;
         static constexpr int kMaxColumnWidth = 35;
-        static constexpr int kMaxRows = 100;
-        static constexpr int kMaxColumns = 50;
+        static constexpr int kMaxRows = detail::kMaxTableRows;
+        static constexpr int kMaxColumns = detail::kMaxTableColumns;
 
         ArchiCreoTableHandler() noexcept :
             table_{},
@@ -34,7 +36,10 @@ namespace creo {
         explicit ArchiCreoTableHandler(
             const detail::RawTable& table) noexcept :
             table_(table),
-            valid_(table.type == detail::kTableObjectType) {
+            valid_(
+                table.type == detail::kTableObjectType &&
+                table.id > 0 &&
+                table.owner != nullptr) {
         }
 
         [[nodiscard]] bool isValid() const noexcept {
@@ -45,20 +50,11 @@ namespace creo {
             return table_;
         }
 
-        void display() const {
+        void display() {
             requireTable();
 
             CREO_CHECK(
                 detail::tableDisplay(&table_));
-        }
-
-        void update(
-            const detail::RawDrawing& drawing) const {
-            requireTable();
-
-            CREO_CHECK(
-                detail::drawingTablesUpdate(
-                    drawing));
         }
 
         static ArchiCreoTableHandler create(
@@ -106,12 +102,6 @@ namespace creo {
             CREO_CHECK(
                 detail::tableDataAlloc(&data));
 
-            auto releaseData = Defer([&] {
-                if (data != nullptr) {
-                    (void)detail::tableDataFree(&data);
-                }
-            });
-
             detail::RawPoint3d tableOrigin{
                 origin[0],
                 origin[1],
@@ -152,13 +142,6 @@ namespace creo {
                     PRO_B_FALSE,
                     &table));
 
-            // Pro*TableDataFree() is the documented owner-side cleanup
-            // for the data allocated by Pro*TableDataAlloc().
-            CREO_CHECK(
-                detail::tableDataFree(&data));
-
-            releaseData.Dismiss();
-
             if (table == nullptr) {
                 throw std::runtime_error(
                     "ArchiCreoTableHandler::create: "
@@ -181,7 +164,7 @@ namespace creo {
         void setCellText(
             int column,
             int row,
-            const std::wstring& text) const {
+            const std::wstring& text) {
 
             requireCell(column, row);
 
@@ -198,7 +181,7 @@ namespace creo {
         }
 
         void setCells(
-            const std::vector<ArchiCreoTableCell>& cells) const {
+            const std::vector<ArchiCreoTableCell>& cells) {
 
             requireTable();
 
@@ -315,7 +298,7 @@ namespace creo {
 
         void setColumnWidth(
             int column,
-            double width) const {
+            double width) {
 
             requireTable();
 
@@ -342,7 +325,7 @@ namespace creo {
             int startRow,
             int endColumn,
             int endRow,
-            bool display = true) const {
+            bool display = true) {
 
             requireCell(startColumn, startRow);
             requireCell(endColumn, endRow);
@@ -367,7 +350,7 @@ namespace creo {
         void addRow(
             int insertAfterRow,
             double height = -1.0,
-            bool display = true) const {
+            bool display = true) {
 
             requireTable();
 
@@ -388,7 +371,7 @@ namespace creo {
         void addColumn(
             int insertAfterColumn,
             double width = -1.0,
-            bool display = true) const {
+            bool display = true) {
 
             requireTable();
 
@@ -413,7 +396,7 @@ namespace creo {
 
         void deleteRow(
             int row,
-            bool display = true) const {
+            bool display = true) {
 
             requireCell(1, row);
 
@@ -426,7 +409,7 @@ namespace creo {
 
         void deleteColumn(
             int column,
-            bool display = true) const {
+            bool display = true) {
 
             requireCell(column, 1);
 
@@ -542,7 +525,7 @@ namespace creo {
 
         void setColumnWidthForText(
             int column,
-            const std::wstring& text) const {
+            const std::wstring& text) {
 
             const double requiredWidth =
                 normalizeColumnWidth(
@@ -769,7 +752,7 @@ namespace creo {
         }
 
         void enableRowAutoHeight(
-            int row) const {
+            int row) {
 
             CREO_CHECK(
                 detail::tableRowHeightAutoAdjustSet(
@@ -807,7 +790,7 @@ namespace creo {
             }
         }
 
-        mutable detail::RawTable table_;
+        detail::RawTable table_;
         bool valid_;
     };
 

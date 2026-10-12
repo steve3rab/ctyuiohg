@@ -1,11 +1,14 @@
 #pragma once
 
+#include "ArchiCreoCompat.hpp"
+
 #include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
 #include "ArchiCreoModelHandler.hpp"
+#include "ArchiCreoAnnotationHandler.hpp"
 #include "ArchiCreoTableHandler.hpp"
 
 namespace creo {
@@ -122,6 +125,16 @@ namespace creo {
                 origin,
                 rowHeight,
                 columnWidths);
+        }
+
+        [[nodiscard]] ArchiCreoAnnotationHandler
+        annotation(
+            const detail::RawAnnotation& annotationHandle) const {
+
+            requireDrawing();
+
+            return ArchiCreoAnnotationHandler(
+                annotationHandle);
         }
 
         [[nodiscard]] ArchiCreoModelHandler model() const {

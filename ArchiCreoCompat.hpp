@@ -1,13 +1,21 @@
 #pragma once
 
+#include <ProToolkit.h>
+
 #include <ProArray.h>
 #include <ProAsmcomp.h>
 #include <ProAsmcomppath.h>
+#include <ProAnnotation.h>
+#include <ProDrawing.h>
+#include <ProEcadUtils.h>
 #include <ProAssembly.h>
 #include <ProCore.h>
-#include <ProDrawing.h>
 #include <ProMdl.h>
+#include <ProObjects.h>
 #include <ProModelitem.h>
+#include <ProIntfimport.h>
+#include <ProSelection.h>
+#include <ProView.h>
 #include <ProParameter.h>
 #include <ProParamval.h>
 #include <ProSolid.h>
@@ -16,12 +24,10 @@
 #elif defined(CREO10)
 #include <ProDwgtable.h>
 #elif defined(CREO13)
-#include <ProDwgtable.h>
 #include <ProTable.h>
 #else
 #error "Define exactly one of CREO10 or CREO13 when building ArchiCreo"
 #endif
-#include <ProToolkit.h>
 #include <ProUtil.h>
 #include <ProWindows.h>
 
@@ -49,6 +55,19 @@ namespace creo::detail {
     using RawVector = ::ProVector;
     using RawPoint3d = ::ProPoint3d;
     using RawDrawing = ::ProDrawing;
+    using RawAnnotation = ::ProAnnotation;
+    using RawAnnotationElem = ::ProAnnotationElem;
+    using RawView = ::ProView;
+    using RawSelection = ::ProSelection;
+    using RawAsmcompPath = ::ProAsmcomppath;
+    using RawAnnotationAttachmentAssociativity =
+        ::ProAnnotationAttachmentAssociativity;
+    using RawIntfImportType = ::ProIntfImportType;
+    using RawImportRepType = ::ProImportRepType;
+    using RawIntfImportLayerFilter = ::ProIntfimportLayerFilter;
+    using RawAppData = ::ProAppData;
+    using RawEcadType = ::ProTKEcadType;
+    using RawEcadImpOpts = ::ProEcadImpOpts;
 #if defined(CREO10)
     using RawTable = ::ProDwgtable;
     using RawTableData = ::ProDwgtabledata;
@@ -67,12 +86,6 @@ namespace creo::detail {
 #if defined(CREO10)
     inline constexpr RawObjectType kTableObjectType =
         PRO_DRAW_TABLE;
-#elif defined(CREO13)
-    inline constexpr RawObjectType kTableObjectType =
-        PRO_TABLE;
-#endif
-
-#if defined(CREO10)
     inline constexpr RawTableSizeType kTableSizeCharacters =
         PRODWGTABLESIZE_CHARACTERS;
     inline constexpr RawTableSizeType kTableSizeCharsTrue =
@@ -81,6 +94,8 @@ namespace creo::detail {
         kTableRowHeightAutoAdjustTrue =
             PRODWGTBLROWHEIGHT_AUTOADJUST_TRUE;
 #elif defined(CREO13)
+    inline constexpr RawObjectType kTableObjectType =
+        PRO_TABLE;
     inline constexpr RawTableSizeType kTableSizeCharacters =
         PROTABLESIZE_CHARACTERS;
     inline constexpr RawTableSizeType kTableSizeCharsTrue =
@@ -89,6 +104,11 @@ namespace creo::detail {
         kTableRowHeightAutoAdjustTrue =
             PROTBLROWHEIGHT_AUTOADJUST_TRUE;
 #endif
+
+    inline constexpr int kMaxTableColumns =
+        PRO_TABLE_MAX_COLS;
+    inline constexpr int kMaxTableRows =
+        PRO_TABLE_MAX_ROWS;
 
     inline constexpr RawBoolean kBooleanFalse = PRO_B_FALSE;
     inline constexpr RawBoolean kBooleanTrue = PRO_B_TRUE;
@@ -161,7 +181,7 @@ namespace creo::detail {
     }
 
     inline ProErrorCode paramvalueTypeGet(
-        const RawParamValue* p_handle,
+        RawParamValue* p_handle,
         RawParamValueType* p_type) {
         return ::ProParamvalueTypeGet(p_handle, p_type);
     }
@@ -388,8 +408,19 @@ namespace creo::detail {
         return static_cast<RawSolid>(model);
     }
 
-    inline ProErrorCode stringFree(char* string) {
-        return ::ProStringFree(string);
+    inline ProErrorCode stringFree(char** p_string) {
+        if (p_string == nullptr || *p_string == nullptr) {
+            return kNoError;
+        }
+
+        const ProErrorCode status =
+            ::ProStringFree(*p_string);
+
+        if (status == kNoError) {
+            *p_string = nullptr;
+        }
+
+        return status;
     }
 
     inline ProErrorCode windowCurrentGet(int* p_window_id) {
@@ -458,25 +489,91 @@ namespace creo::detail {
     }
 
 
-#if defined(CREO10)
-
-    inline ProErrorCode tableDataAlloc(RawTableData* p_data) {
-        return ::ProDwgtabledataAlloc(p_data);
+    inline ProErrorCode intfImportModelWithOptionsMdlnameCreate(
+        RawPath import_file,
+        RawPath profile,
+        RawIntfImportType type,
+        RawMdlType create_type,
+        RawImportRepType rep_type,
+        RawMdlName new_model_name,
+        ::ProIntfimportLayerFilter filter_func,
+        ::ProAppData application_data,
+        RawMdl* created_model) {
+        return ::ProIntfimportModelWithOptionsMdlnameCreate(
+            import_file,
+            profile,
+            type,
+            create_type,
+            rep_type,
+            new_model_name,
+            filter_func,
+            application_data,
+            created_model);
     }
 
-    inline ProErrorCode tableDataFree(RawTableData* p_data) {
-        if (p_data == nullptr || *p_data == nullptr) {
+    inline ProErrorCode ecadImport(
+        RawPath filename,
+        RawEcadImpOpts options,
+        RawEcadType ecad_type,
+        RawMdl* new_model) {
+        return ::ProEcadImport(
+            filename,
+            options,
+            ecad_type,
+            new_model);
+    }
+
+    inline ProErrorCode ecadImpOptsAlloc(
+        RawEcadImpOpts* p_options) {
+        return ::ProEcadImpOptsAlloc(
+            p_options);
+    }
+
+    inline ProErrorCode ecadImpOptsFree(
+        RawEcadImpOpts* p_options) {
+        if (p_options == nullptr ||
+            *p_options == nullptr) {
             return kNoError;
         }
 
         const ProErrorCode status =
-            ::ProDwgtabledataFree(p_data);
+            ::ProEcadImpOptsFree(p_options);
 
         if (status == kNoError) {
-            *p_data = nullptr;
+            *p_options = nullptr;
         }
 
         return status;
+    }
+
+    inline ProErrorCode ecadImpOptsFlexDesignSet(
+        RawEcadImpOpts options,
+        RawBoolean flex_design) {
+        return ::ProEcadImpOptsFlexDesignSet(
+            options,
+            flex_design);
+    }
+
+    inline ProErrorCode ecadImpOptsIDF3EmpFileNameSet(
+        RawEcadImpOpts options,
+        RawPath idf_emp_filename) {
+        return ::ProEcadImpOptsIDF3EmpFileNameSet(
+            options,
+            idf_emp_filename);
+    }
+
+    inline ProErrorCode ecadImpOptsIDF3ImpOtherOutlineSet(
+        RawEcadImpOpts options,
+        RawBoolean import_other_outline) {
+        return ::ProEcadImpOptsIDF3ImpOtherOutlineSet(
+            options,
+            import_other_outline);
+    }
+
+#if defined(CREO10)
+
+    inline ProErrorCode tableDataAlloc(RawTableData* p_data) {
+        return ::ProDwgtabledataAlloc(p_data);
     }
 
     inline ProErrorCode tableDataOriginSet(
@@ -508,8 +605,11 @@ namespace creo::detail {
         RawTableData data,
         RawBoolean display,
         RawTable* p_table) {
+        const RawDrawing drawing =
+            reinterpret_cast<RawDrawing>(model);
+
         return ::ProDrawingTableCreate(
-            reinterpret_cast<ProDrawing>(model),
+            drawing,
             data,
             display,
             p_table);
@@ -532,12 +632,6 @@ namespace creo::detail {
         RawTableSizeType size_type) {
         return ::ProDwgtableColumnWidthSet(
             table, column, width, size_type);
-    }
-
-    inline ProErrorCode drawingTablesUpdate(
-        RawDrawing drawing) {
-        return ::ProDrawingTablesUpdate(
-            drawing);
     }
 
     inline ProErrorCode tableDisplay(
@@ -672,21 +766,6 @@ namespace creo::detail {
 
     inline ProErrorCode tableDataAlloc(RawTableData* p_data) {
         return ::ProTableDataAlloc(p_data);
-    }
-
-    inline ProErrorCode tableDataFree(RawTableData* p_data) {
-        if (p_data == nullptr || *p_data == nullptr) {
-            return kNoError;
-        }
-
-        const ProErrorCode status =
-            ::ProTableDataFree(p_data);
-
-        if (status == kNoError) {
-            *p_data = nullptr;
-        }
-
-        return status;
     }
 
     inline ProErrorCode tableDataOriginSet(
@@ -909,9 +988,176 @@ namespace creo::detail {
 
         // Use this only for wide-string arrays returned by Creo TOOLKIT,
         // such as ProTableCelltextGet().
-        return ::ProWstringproarrayFree(
-            reinterpret_cast<wchar_t**>(p_array));
+        const ProErrorCode status =
+            ::ProWstringproarrayFree(
+                reinterpret_cast<wchar_t**>(p_array));
+
+        if (status == kNoError) {
+            *p_array = nullptr;
+        }
+
+        return status;
     }
+
+    inline ProErrorCode annotationShow(
+        RawAnnotation* annotation,
+        RawAsmcompPath* comp_path,
+        RawView view) {
+        return ::ProAnnotationShow(
+            annotation,
+            comp_path,
+            view);
+    }
+
+    inline ProErrorCode annotationIsShown(
+        RawAnnotation* annotation,
+        RawDrawing drawing,
+        RawBoolean* is_shown) {
+        return ::ProAnnotationIsShown(
+            annotation,
+            drawing,
+            is_shown);
+    }
+
+    inline ProErrorCode annotationDisplay(
+        RawAnnotation* annotation,
+        RawAsmcompPath* comp_path,
+        RawDrawing drawing,
+        RawView view) {
+        return ::ProAnnotationDisplay(
+            annotation,
+            comp_path,
+            drawing,
+            view);
+    }
+
+    inline ProErrorCode annotationUndisplay(
+        RawAnnotation* annotation,
+        RawAsmcompPath* comp_path,
+        RawDrawing drawing) {
+        return ::ProAnnotationUndisplay(
+            annotation,
+            comp_path,
+            drawing);
+    }
+
+    inline ProErrorCode annotationElementGet(
+        RawAnnotation* annotation,
+        RawAnnotationElem* element) {
+        return ::ProAnnotationElementGet(
+            annotation,
+            element);
+    }
+
+    inline ProErrorCode annotationIsInactive(
+        RawAnnotation* annotation,
+        RawBoolean* is_inactive) {
+        return ::ProAnnotationIsInactive(
+            annotation,
+            is_inactive);
+    }
+
+    inline ProErrorCode annotationRotate(
+        RawAnnotation* annotation,
+        double rotation) {
+        return ::ProAnnotationRotate(
+            annotation,
+            rotation);
+    }
+
+    inline ProErrorCode annotationIsAssociative(
+        RawAnnotation* annotation,
+        RawDrawing drawing,
+        RawBoolean* assoc_position,
+        RawAnnotationAttachmentAssociativity* assoc_attach) {
+        return ::ProAnnotationIsAssociative(
+            annotation,
+            drawing,
+            assoc_position,
+            assoc_attach,
+            nullptr);
+    }
+
+    inline ProErrorCode annotationPositionUpdate(
+        RawAnnotation* annotation,
+        RawDrawing drawing) {
+        return ::ProAnnotationPositionUpdate(
+            annotation,
+            drawing);
+    }
+
+    inline ProErrorCode annotationAttachmentUpdate(
+        RawAnnotation* annotation,
+        RawDrawing drawing) {
+        return ::ProAnnotationAttachmentUpdate(
+            annotation,
+            drawing);
+    }
+
+    inline ProErrorCode annotationUpdate(
+        RawAnnotation* annotation,
+        RawDrawing drawing) {
+        return ::ProAnnotationUpdate(
+            annotation,
+            drawing);
+    }
+
+    inline ProErrorCode drawingAnnotationErase(
+        RawDrawing drawing,
+        RawAnnotation* annotation) {
+        return ::ProDrawingAnnotationErase(
+            drawing,
+            annotation);
+    }
+
+    inline ProErrorCode annotationByViewShow(
+        RawDrawing drawing,
+        RawView view,
+        RawObjectType annotation_type) {
+        return ::ProAnnotationByViewShow(
+            drawing,
+            view,
+            annotation_type);
+    }
+
+    inline ProErrorCode annotationByFeatureShow(
+        RawDrawing drawing,
+        RawSelection feature_selection,
+        RawView view,
+        RawObjectType annotation_type) {
+        return ::ProAnnotationByFeatureShow(
+            drawing,
+            feature_selection,
+            view,
+            annotation_type);
+    }
+
+    inline ProErrorCode annotationByComponentShow(
+        RawDrawing drawing,
+        RawSelection component_selection,
+        RawView view,
+        RawObjectType annotation_type) {
+        return ::ProAnnotationByComponentShow(
+            drawing,
+            component_selection,
+            view,
+            annotation_type);
+    }
+
+    inline ProErrorCode annotationNeedsConversion(
+        RawAnnotation* annotation,
+        RawBoolean* needs_conversion) {
+        return ::ProAnnotationNeedsConversion(
+            annotation,
+            needs_conversion);
+    }
+
+    inline ProErrorCode annotationLegacyConvert(
+        RawAnnotation* annotation) {
+        return ::ProAnnotationLegacyConvert(
+            annotation);
+    }
+
 
     inline ProErrorCode engineerConnectIdGet(
         char* connect_id) {
