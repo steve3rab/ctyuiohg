@@ -224,6 +224,37 @@ namespace jnifx {
         }
     }
 
+    bool ArchiJavaFxRuntime::Impl::notifyCreoReady() noexcept {
+        try {
+            std::lock_guard lock(mutex_);
+
+            if (state_ != ArchiJavaFxRuntime::State::Starting &&
+                state_ != ArchiJavaFxRuntime::State::Ready) {
+                return false;
+            }
+
+            if (stopRequested_) {
+                return false;
+            }
+
+            constexpr std::size_t maxPendingCommands = 64;
+            if (commands_.size() >= maxPendingCommands) {
+                lastError_ = "Too many pending JavaFX commands";
+                return false;
+            }
+
+            WindowCommand command;
+            command.kind = WindowCommand::Kind::NotifyCreoReady;
+            commands_.push_back(std::move(command));
+            commandCondition_.notify_one();
+            return true;
+        } catch (...) {
+            std::lock_guard lock(mutex_);
+            lastError_ = detail::exceptionMessage(std::current_exception());
+            return false;
+        }
+    }
+
     ArchiJavaFxRuntime::RequestId ArchiJavaFxRuntime::Impl::tryOpenWindow(std::string title, Arguments arguments) {
         try {
             return dispatchWindow(std::move(title), std::move(arguments), WindowMode::Modeless);
@@ -336,6 +367,28 @@ namespace jnifx {
         commandCondition_.notify_one();
     }
 
+    void ArchiJavaFxRuntime::Impl::executeCreoReady(JNIEnv* env) noexcept {
+        try {
+            if (env == nullptr ||
+                bridgeClass_ == nullptr ||
+                creoReadyMethod_ == nullptr) {
+                throw std::runtime_error(
+                    "JavaFxBridge.onCreoReady is missing");
+            }
+
+            env->CallStaticVoidMethod(
+                bridgeClass_,
+                creoReadyMethod_);
+            detail::throwIfJavaException(
+                env,
+                "notifying JavaFX that Creo is ready");
+        } catch (...) {
+            std::lock_guard lock(mutex_);
+            lastError_ = detail::exceptionMessage(
+                std::current_exception());
+        }
+    }
+
     void ArchiJavaFxRuntime::Impl::executeProcessingCompletion(JNIEnv* env, WindowCommand command) {
         try {
             jstring message = detail::newJavaString(env, command.processingMessage);
@@ -359,6 +412,11 @@ namespace jnifx {
     void ArchiJavaFxRuntime::Impl::executeWindow(JNIEnv* env, WindowCommand command) {
         if (command.kind == WindowCommand::Kind::CompleteProcessing) {
             executeProcessingCompletion(env, std::move(command));
+            return;
+        }
+
+        if (command.kind == WindowCommand::Kind::NotifyCreoReady) {
+            executeCreoReady(env);
             return;
         }
         try {
@@ -921,10 +979,16 @@ namespace jnifx {
             bridgeClass_, "openWindow", "(Ljava/lang/String;[Ljava/lang/String;IJ)V");
         completeProcessingMethod_ = env->GetStaticMethodID(
             bridgeClass_, "completeProcessing", "(JZLjava/lang/String;)V");
+        creoReadyMethod_ = env->GetStaticMethodID(
+            bridgeClass_, "onCreoReady", "()V");
         shutdownMethod_ = env->GetStaticMethodID(bridgeClass_, "shutdown", "()V");
         detail::throwIfJavaException(env, "resolving JavaFxBridge methods");
 
-        if (initializeMethod_ == nullptr || openWindowMethod_ == nullptr || completeProcessingMethod_ == nullptr || shutdownMethod_ == nullptr) {
+        if (initializeMethod_ == nullptr ||
+            openWindowMethod_ == nullptr ||
+            completeProcessingMethod_ == nullptr ||
+            creoReadyMethod_ == nullptr ||
+            shutdownMethod_ == nullptr) {
             throw std::runtime_error("JavaFxBridge method missing");
         }
 
@@ -972,6 +1036,7 @@ namespace jnifx {
         initializeMethod_ = nullptr;
         openWindowMethod_ = nullptr;
         completeProcessingMethod_ = nullptr;
+        creoReadyMethod_ = nullptr;
         shutdownMethod_ = nullptr;
     }
 
