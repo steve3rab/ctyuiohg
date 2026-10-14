@@ -358,6 +358,8 @@ void fillHoleTableExample(
      */
 }
 
+} // namespace creo::example
+
 /*
  * Example redefinition of the legacy entry point.
  *
@@ -407,12 +409,9 @@ ProError user_place_holeTable_(
         }
 
         /*
-         * The legacy code obtains the insertion point with
-         * ProMousePickGet(). For a strict wrapper-only implementation,
-         * the project should expose that call through ArchiCreoCompat.
-         *
-         * This example keeps the existing application placement mechanism
-         * visible instead of inventing a second placement API.
+         * Keep the existing placement mechanism.
+         * ProMousePickGet() is intentionally shown here because the current
+         * Compat layer does not expose a mouse-pick wrapper.
          */
         ProMouseButton pickedButton{};
         detail::RawPoint3d origin{};
@@ -426,7 +425,7 @@ ProError user_place_holeTable_(
         const creo::ArchiCreoModelHandler drawingModel(drw);
 
         /*
-         * 1. Create the table through ArchiCreoTableHandler.
+         * 1. Create the table through the new handler.
          */
         creo::ArchiCreoTableHandler table =
             creo::example::createHoleTableExample(
@@ -435,67 +434,21 @@ ProError user_place_holeTable_(
                 groupedHoleCount);
 
         /*
-         * 2. Fill the table through ArchiCreoTableHandler.
+         * 2. Fill the table through the new handler.
          *
-         * The callback adapters below intentionally point to the existing
-         * project functions. No new hole-detection behavior is introduced.
+         * This keeps all table creation/text/wrapping logic in
+         * ArchiCreoTableHandler. The existing hole-note behavior remains
+         * in fillHoleTableExample().
          */
-        fillHoleTableExample(
+        creo::example::fillHoleTableExample(
             table,
             p_arrayHoleProperties,
             groupedHoleCount,
-            arrayGroupedHoles,
-            [](int groupIndex) -> std::wstring {
-                char letterSeed[3] = {
-                    ' ',
-                    '@',
-                    '\\0'
-                };
-
-                wchar_t returnedLetter[3] = {};
-
-                for (int index = 0;
-                     index <= groupIndex;
-                     ++index) {
-                    userGetLastLetter(
-                        letterSeed,
-                        returnedLetter);
-                }
-
-                return returnedLetter;
-            },
-            [](const auto& holeFeature) -> double {
-                double maximumDiameter = -1.0;
-
-                CREO_CHECK(
-                    detail::featureGeomitemVisit(
-                        &holeFeature,
-                        PRO_SURFACE,
-                        get_geomitem_cylinder_cone_max_diam,
-                        PRO_NO_FUNCTION,
-                        &maximumDiameter));
-
-                return maximumDiameter;
-            },
-            [](auto& holeFeature,
-               const std::wstring& letter,
-               double maximumDiameter) {
-                wchar_t buffer[3] = {};
-
-                std::copy(
-                    letter.begin(),
-                    letter.end(),
-                    buffer);
-
-                placeHoleNoteOnViews(
-                    &holeFeature,
-                    static_cast<ProDrawing>(holeTableCurrentDrawing),
-                    buffer,
-                    maximumDiameter);
-            });
+            static_cast<ProDrawing>(drw),
+            arrayGroupedHoles);
 
         /*
-         * 3. Display only once, after the table is fully configured.
+         * 3. Display once after the table is completely configured.
          */
         table.display();
 
@@ -523,4 +476,3 @@ ProError user_place_holeTable_(
  * The existing user_place_holeTable_() is intentionally NOT redefined here.
  */
 
-} // namespace creo::example
