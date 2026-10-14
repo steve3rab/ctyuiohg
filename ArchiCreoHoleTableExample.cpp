@@ -359,6 +359,157 @@ void fillHoleTableExample(
 }
 
 /*
+ * Example redefinition of the legacy entry point.
+ *
+ * IMPORTANT:
+ * Do not compile this function in the same target as the existing
+ * user_place_holeTable_(). It intentionally keeps the historical signature
+ * so all existing callers remain unchanged.
+ */
+ProError user_place_holeTable_(
+    UserHoleProperties** p_arrayHoleProperties,
+    ProMdl drw,
+    int* arrayGroupedHoles)
+{
+    try {
+        if (p_arrayHoleProperties == nullptr ||
+            drw == nullptr ||
+            arrayGroupedHoles == nullptr) {
+            return PRO_TK_BAD_INPUTS;
+        }
+
+        detail::RawMdlType modelType{};
+
+        CREO_CHECK(
+            detail::mdlTypeGet(
+                drw,
+                &modelType));
+
+        if (modelType != PRO_MDL_DRAWING) {
+            return PRO_TK_NO_ERROR;
+        }
+
+        int groupedHoleCount = 0;
+
+        CREO_CHECK(
+            detail::arraySizeGet(
+                reinterpret_cast<detail::RawArray>(
+                    arrayGroupedHoles),
+                &groupedHoleCount));
+
+        if (groupedHoleCount <= 0) {
+            return PRO_TK_NO_ERROR;
+        }
+
+        if (groupedHoleCount >
+            detail::kMaxTableRows - 2) {
+            return PRO_TK_BAD_INPUTS;
+        }
+
+        /*
+         * The legacy code obtains the insertion point with
+         * ProMousePickGet(). For a strict wrapper-only implementation,
+         * the project should expose that call through ArchiCreoCompat.
+         *
+         * This example keeps the existing application placement mechanism
+         * visible instead of inventing a second placement API.
+         */
+        ProMouseButton pickedButton{};
+        detail::RawPoint3d origin{};
+
+        CREO_CHECK(
+            ::ProMousePickGet(
+                PRO_LEFT_BUTTON,
+                &pickedButton,
+                origin));
+
+        const creo::ArchiCreoModelHandler drawingModel(drw);
+
+        /*
+         * 1. Create the table through ArchiCreoTableHandler.
+         */
+        creo::ArchiCreoTableHandler table =
+            creo::example::createHoleTableExample(
+                drawingModel,
+                origin,
+                groupedHoleCount);
+
+        /*
+         * 2. Fill the table through ArchiCreoTableHandler.
+         *
+         * The callback adapters below intentionally point to the existing
+         * project functions. No new hole-detection behavior is introduced.
+         */
+        fillHoleTableExample(
+            table,
+            p_arrayHoleProperties,
+            groupedHoleCount,
+            arrayGroupedHoles,
+            [](int groupIndex) -> std::wstring {
+                char letterSeed[3] = {
+                    ' ',
+                    '@',
+                    '\\0'
+                };
+
+                wchar_t returnedLetter[3] = {};
+
+                for (int index = 0;
+                     index <= groupIndex;
+                     ++index) {
+                    userGetLastLetter(
+                        letterSeed,
+                        returnedLetter);
+                }
+
+                return returnedLetter;
+            },
+            [](const auto& holeFeature) -> double {
+                double maximumDiameter = -1.0;
+
+                CREO_CHECK(
+                    detail::featureGeomitemVisit(
+                        &holeFeature,
+                        PRO_SURFACE,
+                        get_geomitem_cylinder_cone_max_diam,
+                        PRO_NO_FUNCTION,
+                        &maximumDiameter));
+
+                return maximumDiameter;
+            },
+            [](auto& holeFeature,
+               const std::wstring& letter,
+               double maximumDiameter) {
+                wchar_t buffer[3] = {};
+
+                std::copy(
+                    letter.begin(),
+                    letter.end(),
+                    buffer);
+
+                placeHoleNoteOnViews(
+                    &holeFeature,
+                    static_cast<ProDrawing>(holeTableCurrentDrawing),
+                    buffer,
+                    maximumDiameter);
+            });
+
+        /*
+         * 3. Display only once, after the table is fully configured.
+         */
+        table.display();
+
+        return PRO_TK_NO_ERROR;
+    }
+    catch (const creo::ProToolkitError& error) {
+        return error.code();
+    }
+    catch (...) {
+        return PRO_TK_GENERAL_ERROR;
+    }
+}
+
+/*
  * Integration pattern for the existing user_place_holeTable_():
  *
  *   - keep its signature and all callers unchanged;
