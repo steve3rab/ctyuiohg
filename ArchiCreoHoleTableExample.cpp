@@ -286,6 +286,18 @@ void fillHoleTableExample(
         false);
 
     /*
+     * Keep the title and header compact.
+     * Body rows may grow later only when actual wrapping requires it.
+     */
+    table.setRowHeight(
+        1,
+        kHoleTableRowHeight);
+
+    table.setRowHeight(
+        2,
+        kHoleTableRowHeight);
+
+    /*
      * Preserve the legacy hole-note processing.
      */
     for (int groupIndex = 0;
