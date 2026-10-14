@@ -76,6 +76,41 @@ public final class ArchiCreoJniLauncher {
     }
 
     /**
+     * Receives the existing native-to-Java runtime notification that the
+     * Creo plugin has completed its initialization.
+     *
+     * The native runtime invokes this method on its dedicated JVM owner
+     * thread. Any JavaFX UI work is therefore dispatched to the JavaFX
+     * Application Thread.
+     */
+    public static void onCreoReady() {
+        if (!INITIALIZED.get() || SHUTTING_DOWN.get()) {
+            return;
+        }
+
+        if (Platform.isFxApplicationThread()) {
+            handleCreoReady();
+            return;
+        }
+
+        try {
+            Platform.runLater(
+                ArchiCreoJniLauncher::handleCreoReady);
+        } catch (Throwable ignored) {
+            // The native runtime owns lifecycle/error reporting.
+        }
+    }
+
+    private static void handleCreoReady() {
+        if (SHUTTING_DOWN.get()) {
+            return;
+        }
+
+        // Application-specific Java/JavaFX handling for "Creo plugin ready"
+        // belongs here. No native/Creo call is made from this thread.
+    }
+
+    /**
      * Opens either a modeless or modal window asynchronously.
      * mode 0 = Modality.NONE
      * mode 1 = Modality.APPLICATION_MODAL
