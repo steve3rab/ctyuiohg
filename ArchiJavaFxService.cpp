@@ -135,6 +135,10 @@ void ArchiJavaFxService::completeProcessing(RequestId requestId, bool success, s
     runtime_.completeProcessing(requestId, success, std::move(message));
 }
 
+bool ArchiJavaFxService::notifyCreoReady() noexcept {
+    return runtime_.notifyCreoReady();
+}
+
 void ArchiJavaFxService::setResultCallback(ResultCallback callback) {
     runtime_.setResultCallback(
         [this, callback = std::move(callback)](
