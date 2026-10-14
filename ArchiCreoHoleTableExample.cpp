@@ -19,15 +19,35 @@
 #include <string>
 #include <vector>
 
+/* Existing legacy helper, defined in this same translation unit. */
+ProError userGetLastLetter(char* p_lettre, wchar_t* p_returnedLetter)
+{
+    int firstAsciiLetter = 65; /*A-65*/
+    int lastAsciiLetter = 90; /*Z-90*/
+
+    wcscpy(p_returnedLetter, L"--");
+
+    if (p_lettre[1] < lastAsciiLetter) {
+        p_lettre[1]++;
+        ::stringToWstring(p_returnedLetter, p_lettre);
+    } else if (p_lettre[0] < lastAsciiLetter && p_lettre[1] <= lastAsciiLetter) {
+        if (p_lettre[0] == 32) {
+            p_lettre[0] = (char) firstAsciiLetter;
+            p_lettre[1] = (char) firstAsciiLetter;
+        } else {
+            p_lettre[0]++;
+            p_lettre[1] = (char) firstAsciiLetter;
+        }
+        ::stringToWstring(p_returnedLetter, p_lettre);
+    }
+
+    return (PRO_TK_NO_ERROR);
+}
+
+
 /*
- * Include here the existing project header that declares:
- *   - UserHoleProperties
- *   - userGetLastLetter()
- *   - get_geomitem_cylinder_cone_max_diam()
- *   - placeHoleNoteOnViews()
- *
- * That header is intentionally not invented here because it is not present
- * in the current repository.
+ * UserHoleProperties and the other existing hole helpers are assumed to be
+ * available from the same legacy translation unit/application context.
  */
 
 
@@ -281,11 +301,9 @@ void fillHoleTableExample(
             ::ProFeatureGeomitemVisit(
                 &leader.holeFeature,
                 PRO_SURFACE,
-                reinterpret_cast<ProGeomitemAction>(
-                    get_geomitem_cylinder_cone_max_diam),
-                PRO_NO_FUNCTION,
-                static_cast<ProAppData>(
-                    &threadMaxDiameter)));
+                (ProGeomitemAction) get_geomitem_cylinder_cone_max_diam,
+                (ProGeomitemFilter) PRO_NO_FUNCTION,
+                (ProAppData) &threadMaxDiameter));
 
         placeHoleNoteOnViews(
             &leader.holeFeature,
@@ -410,7 +428,7 @@ ProError user_place_holeTable_(
          * Compat layer does not expose a mouse-pick wrapper.
          */
         ProMouseButton pickedButton{};
-        detail::RawPoint3d origin{};
+        creo::detail::RawPoint3d origin{};
 
         CREO_CHECK(
             ::ProMousePickGet(
