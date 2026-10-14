@@ -166,13 +166,17 @@ void fillHoleTableExample(
     std::vector<creo::ArchiCreoTableCell> cells;
     cells.reserve(
         static_cast<std::size_t>(
-            groupedHoleCount * kHoleTableColumns + 6));
+            groupedHoleCount * kHoleTableColumns + 5));
 
-    cells.push_back({
+    /*
+     * The title cell is merged across all five columns.
+     * Do not pass it through the generic wrapping logic because that
+     * logic measures a single column. Write it as one line instead.
+     */
+    table.setCellTextNoWrap(
         1,
         1,
-        L"HOLE TABLE"
-    });
+        L"HOLE TABLE");
 
     cells.push_back({1, 2, L"HOLE"});
     cells.push_back({2, 2, L"DESCRIPTION"});
