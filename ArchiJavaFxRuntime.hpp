@@ -73,6 +73,7 @@ namespace jnifx {
         RequestId tryOpenModalWindow(std::string title, Arguments arguments = {});
 
         void completeProcessing(RequestId requestId, bool success, std::string message = {});
+        bool notifyCreoReady() noexcept;
 
         State state() const noexcept;
         bool isReady() const noexcept;
