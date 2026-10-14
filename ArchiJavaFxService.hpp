@@ -33,6 +33,7 @@ class ArchiJavaFxService final {
 
     void setResultCallback(ResultCallback callback);
     void completeProcessing(RequestId requestId, bool success, std::string message = {});
+    bool notifyCreoReady() noexcept;
 
   private:
     ArchiJavaFxService();
