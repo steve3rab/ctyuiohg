@@ -225,6 +225,18 @@ void fillHoleTableExample(
         const int row =
             groupIndex + 3;
 
+        /*
+         * A hole without a note can legitimately have noteText[0] == nullptr.
+         * In that case the table description is simply empty.
+         */
+        const wchar_t* noteText =
+            hole.noteText[0];
+
+        const std::wstring description =
+            noteText == nullptr
+                ? std::wstring{}
+                : std::wstring(noteText);
+
         cells.push_back({
             1,
             row,
@@ -234,7 +246,7 @@ void fillHoleTableExample(
         cells.push_back({
             2,
             row,
-            hole.noteText[0]
+            description
         });
 
         cells.push_back({
