@@ -278,12 +278,14 @@ void fillHoleTableExample(
         double threadMaxDiameter = -1.0;
 
         CREO_CHECK(
-            detail::featureGeomitemVisit(
+            ::ProFeatureGeomitemVisit(
                 &leader.holeFeature,
                 PRO_SURFACE,
-                get_geomitem_cylinder_cone_max_diam,
+                reinterpret_cast<ProGeomitemAction>(
+                    get_geomitem_cylinder_cone_max_diam),
                 PRO_NO_FUNCTION,
-                &threadMaxDiameter));
+                static_cast<ProAppData>(
+                    &threadMaxDiameter)));
 
         placeHoleNoteOnViews(
             &leader.holeFeature,
