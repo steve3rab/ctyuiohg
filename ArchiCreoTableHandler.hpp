@@ -296,15 +296,34 @@ namespace creo {
                 false);
 
             for (const ArchiCreoTableCell& cell : cells) {
+                const std::wstring normalized =
+                    normalizeLineBreaks(cell.text);
+
+                const std::size_t width =
+                    static_cast<std::size_t>(
+                        getColumnWidthInCharacters(
+                            cell.column));
+
+                const std::vector<std::wstring> lines =
+                    wrapText(normalized, width);
+
                 enterWrappedCellText(
                     cell.column,
                     cell.row,
-                    cell.text);
+                    normalized);
 
                 const std::size_t rowIndex =
                     static_cast<std::size_t>(cell.row);
 
-                if (!autoHeightRows[rowIndex]) {
+                /*
+                 * Only request automatic height when the cell really
+                 * contains more than one rendered line. Enabling it for
+                 * every one-line cell can produce unnecessary row-height
+                 * changes, and Creo applies those changes only after a
+                 * regeneration/table update.
+                 */
+                if (lines.size() > 1 &&
+                    !autoHeightRows[rowIndex]) {
                     enableRowAutoHeight(cell.row);
                     autoHeightRows[rowIndex] = true;
                 }
@@ -359,6 +378,34 @@ namespace creo {
                     &table_,
                     column,
                     normalizedWidth,
+                    detail::kTableSizeCharsTrue));
+        }
+
+        void setRowHeight(
+            int row,
+            double height) {
+
+            requireTable();
+
+            if (row < 1 ||
+                row > rowCount()) {
+                throw std::out_of_range(
+                    "ArchiCreoTableHandler::setRowHeight: "
+                    "row index out of range");
+            }
+
+            if (!std::isfinite(height) ||
+                height <= 0.0) {
+                throw std::invalid_argument(
+                    "ArchiCreoTableHandler::setRowHeight: "
+                    "height must be finite and greater than zero");
+            }
+
+            CREO_CHECK(
+                detail::tableRowHeightSet(
+                    &table_,
+                    row,
+                    height,
                     detail::kTableSizeCharsTrue));
         }
 
