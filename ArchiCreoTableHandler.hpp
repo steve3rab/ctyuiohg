@@ -142,13 +142,15 @@ namespace creo {
                     PRO_B_FALSE,
                     &table));
 
-            if (table == nullptr) {
+            ArchiCreoTableHandler result(table);
+
+            if (!result.isValid()) {
                 throw std::runtime_error(
                     "ArchiCreoTableHandler::create: "
-                    "Creo returned a null table handle");
+                    "Creo returned an invalid table handle");
             }
 
-            return ArchiCreoTableHandler(table);
+            return result;
         }
 
         [[nodiscard]] int rowCount() const {
