@@ -55,7 +55,7 @@ const std::vector<double> kHoleTableColumnWidths{
 
 creo::ArchiCreoTableHandler createHoleTableExample(
     const creo::ArchiCreoModelHandler& drawingModel,
-    const detail::RawPoint3d& origin,
+    const creo::detail::RawPoint3d& origin,
     int groupedHoleCount)
 {
     if (!drawingModel.isValid()) {
@@ -74,7 +74,7 @@ creo::ArchiCreoTableHandler createHoleTableExample(
     }
 
     if (groupedHoleCount >
-        detail::kMaxTableRows - 2) {
+        creo::detail::kMaxTableRows - 2) {
         throw std::invalid_argument(
             "createHoleTableExample: too many grouped holes");
     }
@@ -374,10 +374,10 @@ ProError user_place_holeTable_(
             return PRO_TK_BAD_INPUTS;
         }
 
-        detail::RawMdlType modelType{};
+        creo::detail::RawMdlType modelType{};
 
         CREO_CHECK(
-            detail::mdlTypeGet(
+            creo::detail::mdlTypeGet(
                 drw,
                 &modelType));
 
@@ -388,8 +388,8 @@ ProError user_place_holeTable_(
         int groupedHoleCount = 0;
 
         CREO_CHECK(
-            detail::arraySizeGet(
-                reinterpret_cast<detail::RawArray>(
+            creo::detail::arraySizeGet(
+                reinterpret_cast<creo::detail::RawArray>(
                     arrayGroupedHoles),
                 &groupedHoleCount));
 
@@ -398,7 +398,7 @@ ProError user_place_holeTable_(
         }
 
         if (groupedHoleCount >
-            detail::kMaxTableRows - 2) {
+            creo::detail::kMaxTableRows - 2) {
             return PRO_TK_BAD_INPUTS;
         }
 
