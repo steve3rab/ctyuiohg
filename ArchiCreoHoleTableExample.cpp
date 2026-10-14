@@ -30,9 +30,6 @@
  * in the current repository.
  */
 
-namespace creo::example {
-
-namespace {
 
 constexpr int kHoleTableColumns = 5;
 constexpr double kHoleTableRowHeight = 7.0;
@@ -55,8 +52,6 @@ const std::vector<double> kHoleTableColumnWidths{
     14.0,
     18.0
 };
-
-} // namespace
 
 creo::ArchiCreoTableHandler createHoleTableExample(
     const creo::ArchiCreoModelHandler& drawingModel,
@@ -358,7 +353,6 @@ void fillHoleTableExample(
      */
 }
 
-} // namespace creo::example
 
 /*
  * Example redefinition of the legacy entry point.
@@ -428,7 +422,7 @@ ProError user_place_holeTable_(
          * 1. Create the table through the new handler.
          */
         creo::ArchiCreoTableHandler table =
-            creo::example::createHoleTableExample(
+            createHoleTableExample(
                 drawingModel,
                 origin,
                 groupedHoleCount);
@@ -440,7 +434,7 @@ ProError user_place_holeTable_(
          * ArchiCreoTableHandler. The existing hole-note behavior remains
          * in fillHoleTableExample().
          */
-        creo::example::fillHoleTableExample(
+        fillHoleTableExample(
             table,
             p_arrayHoleProperties,
             groupedHoleCount,
