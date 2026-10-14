@@ -34,11 +34,12 @@ class ArchiJavaFxRuntime::Impl final {
     std::string lastError() const;
     void setResultCallback(ResultCallback callback);
     void completeProcessing(RequestId requestId, bool success, std::string message);
+    bool notifyCreoReady() noexcept;
     void shutdown() noexcept;
 
   private:
     struct WindowCommand final {
-        enum class Kind : std::uint8_t { OpenWindow, CompleteProcessing };
+        enum class Kind : std::uint8_t { OpenWindow, CompleteProcessing, NotifyCreoReady };
         Kind kind = Kind::OpenWindow;
         RequestId requestId = 0;
         WindowMode mode = WindowMode::Modeless;
@@ -56,6 +57,7 @@ class ArchiJavaFxRuntime::Impl final {
     RequestId dispatchWindow(std::string title, Arguments arguments, WindowMode mode);
     void executeWindow(JNIEnv* env, WindowCommand command);
     void executeProcessingCompletion(JNIEnv* env, WindowCommand command);
+    void executeCreoReady(JNIEnv* env) noexcept;
     void onWindowClosed(RequestId requestId) noexcept;
     void onWindowResult(RequestId requestId, int status, std::vector<std::string> values) noexcept;
     void onWindowProcessingFinished(RequestId requestId, bool success) noexcept;
@@ -104,6 +106,7 @@ class ArchiJavaFxRuntime::Impl final {
     jmethodID initializeMethod_ = nullptr;
     jmethodID openWindowMethod_ = nullptr;
     jmethodID completeProcessingMethod_ = nullptr;
+    jmethodID creoReadyMethod_ = nullptr;
     jmethodID shutdownMethod_ = nullptr;
 
     detail::ArchiWindowsJvmLoader jvmLoader_;
