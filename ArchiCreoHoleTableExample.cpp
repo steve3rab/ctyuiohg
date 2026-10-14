@@ -14,6 +14,7 @@
 #include "ArchiCreoTableHandler.hpp"
 #include "ArchiCreoCompat.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <stdexcept>
 #include <string>
@@ -53,6 +54,31 @@ ProError userGetLastLetter(char* p_lettre, wchar_t* p_returnedLetter)
 
 constexpr int kHoleTableColumns = 5;
 constexpr double kHoleTableRowHeight = 7.0;
+
+/*
+ * UserHoleProperties::noteText is a fixed [1][220] wchar_t buffer.
+ * An empty note is represented by noteText[0][0] == L'\\0'.
+ *
+ * Use a bounded search so malformed/non-terminated data cannot make
+ * std::wstring read beyond the field.
+ */
+std::wstring getHoleDescription(
+    const UserHoleProperties& hole)
+{
+    constexpr std::size_t kNoteTextCapacity = 220;
+
+    const wchar_t* begin = hole.noteText[0];
+
+    const wchar_t* end =
+        std::find(
+            begin,
+            begin + kNoteTextCapacity,
+            L'\\0');
+
+    return std::wstring(
+        begin,
+        end);
+}
 
 /*
  * Character-based widths used by ArchiCreoTableHandler.
@@ -147,6 +173,19 @@ void fillHoleTableExample(
         return;
     }
 
+    int holePropertiesCount = 0;
+
+    CREO_CHECK(
+        creo::detail::arraySizeGet(
+            reinterpret_cast<creo::detail::RawArray>(
+                *p_arrayHoleProperties),
+            &holePropertiesCount));
+
+    if (holePropertiesCount <= 0) {
+        throw std::invalid_argument(
+            "fillHoleTableExample: empty UserHoleProperties array");
+    }
+
     if (table.columnCount() != kHoleTableColumns ||
         table.rowCount() != groupedHoleCount + 2) {
         throw std::runtime_error(
@@ -191,9 +230,10 @@ void fillHoleTableExample(
         const int propertyIndex =
             arrayGroupedHoles[groupIndex];
 
-        if (propertyIndex < 0) {
+        if (propertyIndex < 0 ||
+            propertyIndex >= holePropertiesCount) {
             throw std::out_of_range(
-                "fillHoleTableExample: invalid grouped-hole index");
+                "fillHoleTableExample: grouped-hole index out of range");
         }
 
         UserHoleProperties& hole =
@@ -221,17 +261,8 @@ void fillHoleTableExample(
         const int row =
             groupIndex + 3;
 
-        /*
-         * A hole without a note can legitimately have noteText[0] == nullptr.
-         * In that case the table description is simply empty.
-         */
-        const wchar_t* noteText =
-            hole.noteText[0];
-
         const std::wstring description =
-            noteText == nullptr
-                ? std::wstring{}
-                : std::wstring(noteText);
+            getHoleDescription(hole);
 
         cells.push_back({
             1,
@@ -307,9 +338,10 @@ void fillHoleTableExample(
         const int propertyIndex =
             arrayGroupedHoles[groupIndex];
 
-        if (propertyIndex < 0) {
+        if (propertyIndex < 0 ||
+            propertyIndex >= holePropertiesCount) {
             throw std::out_of_range(
-                "fillHoleTableExample: invalid grouped-hole index");
+                "fillHoleTableExample: grouped-hole index out of range");
         }
 
         UserHoleProperties& leader =
@@ -374,9 +406,10 @@ void fillHoleTableExample(
                 const int childIndex =
                     groupIndex + childOffset;
 
-                if (childIndex < 0) {
-                    throw std::runtime_error(
-                        "fillHoleTableExample: invalid child index");
+                if (childIndex < 0 ||
+                    childIndex >= holePropertiesCount) {
+                    throw std::out_of_range(
+                        "fillHoleTableExample: child-hole index out of range");
                 }
 
                 UserHoleProperties& child =
