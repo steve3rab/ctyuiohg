@@ -180,6 +180,48 @@ namespace creo {
             enableRowAutoHeight(row);
         }
 
+        void setCellTextNoWrap(
+            int column,
+            int row,
+            const std::wstring& text) {
+
+            requireCell(column, row);
+
+            if (text.find(L'\\n') != std::wstring::npos ||
+                text.find(L'\\r') != std::wstring::npos) {
+                throw std::invalid_argument(
+                    "ArchiCreoTableHandler::setCellTextNoWrap: "
+                    "text must contain a single line");
+            }
+
+            detail::RawWstringProArray textLines = nullptr;
+
+            CREO_CHECK(
+                detail::wstringProArrayAlloc(
+                    1,
+                    &textLines));
+
+            auto freeTextLines = Defer([&] {
+                CREO_CHECK(
+                    detail::wstringProArrayFree(
+                        &textLines));
+            });
+
+            std::vector<wchar_t> buffer(
+                text.begin(),
+                text.end());
+
+            buffer.push_back(L'\\0');
+            textLines[0] = buffer.data();
+
+            CREO_CHECK(
+                detail::tableTextEnter(
+                    &table_,
+                    column,
+                    row,
+                    textLines));
+        }
+
         void setCells(
             const std::vector<ArchiCreoTableCell>& cells) {
 
