@@ -136,6 +136,7 @@ void fillHoleTableExample(
     }
 
     if (p_arrayHoleProperties == nullptr ||
+        *p_arrayHoleProperties == nullptr ||
         arrayGroupedHoles == nullptr ||
         drawing == nullptr) {
         throw std::invalid_argument(
@@ -180,8 +181,12 @@ void fillHoleTableExample(
     cells.push_back({5, 2, L"POSITIONAL TOL"});
 
     /*
-     * The original UserHoleProperties array remains application-owned.
-     * This example only reads/writes its existing fields.
+     * p_arrayHoleProperties is a pointer to the existing contiguous
+     * UserHoleProperties array. The legacy expression was:
+     *
+     *     (*p_arrayHoleProperties)[index]
+     *
+     * Do not interpret it as an array of UserHoleProperties pointers.
      */
     for (int groupIndex = 0;
          groupIndex < groupedHoleCount;
@@ -196,7 +201,7 @@ void fillHoleTableExample(
         }
 
         UserHoleProperties& hole =
-            *p_arrayHoleProperties[propertyIndex];
+            (*p_arrayHoleProperties)[propertyIndex];
 
         char letterSeed[3] = {
             ' ',
@@ -277,7 +282,7 @@ void fillHoleTableExample(
         }
 
         UserHoleProperties& leader =
-            *p_arrayHoleProperties[propertyIndex];
+            (*p_arrayHoleProperties)[propertyIndex];
 
         char letterSeed[3] = {
             ' ',
@@ -344,7 +349,7 @@ void fillHoleTableExample(
                 }
 
                 UserHoleProperties& child =
-                    *p_arrayHoleProperties[childIndex];
+                    (*p_arrayHoleProperties)[childIndex];
 
                 if (leader.holeFeature.id ==
                     child.leaderId) {
