@@ -154,29 +154,21 @@ void fillHoleTableExample(
     }
 
     /*
-     * Keep title merged, but do not display/repaint while building.
-     */
-    table.mergeCells(
-        1,
-        1,
-        kHoleTableColumns,
-        1,
-        false);
-
-    std::vector<creo::ArchiCreoTableCell> cells;
-    cells.reserve(
-        static_cast<std::size_t>(
-            groupedHoleCount * kHoleTableColumns + 5));
-
-    /*
-     * The title cell is merged across all five columns.
-     * Do not pass it through the generic wrapping logic because that
-     * logic measures a single column. Write it as one line instead.
+     * Write the title before merging the first row.
+     *
+     * The text is inserted without wrapping because the final cell spans
+     * all five columns. The merge itself is delayed until the table
+     * contents are configured, avoiding an intermediate remesh.
      */
     table.setCellTextNoWrap(
         1,
         1,
         L"HOLE TABLE");
+
+    std::vector<creo::ArchiCreoTableCell> cells;
+    cells.reserve(
+        static_cast<std::size_t>(
+            groupedHoleCount * kHoleTableColumns + 5));
 
     cells.push_back({1, 2, L"HOLE"});
     cells.push_back({2, 2, L"DESCRIPTION"});
@@ -281,6 +273,17 @@ void fillHoleTableExample(
      *   - row auto-height
      */
     table.setCells(cells);
+
+    /*
+     * Merge the title row only after all other cells are populated.
+     * No display/repaint is requested.
+     */
+    table.mergeCells(
+        1,
+        1,
+        kHoleTableColumns,
+        1,
+        false);
 
     /*
      * Preserve the legacy hole-note processing.
