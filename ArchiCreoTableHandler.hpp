@@ -187,8 +187,8 @@ namespace creo {
 
             requireCell(column, row);
 
-            if (text.find(L'\\n') != std::wstring::npos ||
-                text.find(L'\\r') != std::wstring::npos) {
+            if (text.find(L'\n') != std::wstring::npos ||
+                text.find(L'\r') != std::wstring::npos) {
                 throw std::invalid_argument(
                     "ArchiCreoTableHandler::setCellTextNoWrap: "
                     "text must contain a single line");
@@ -211,7 +211,7 @@ namespace creo {
                 text.begin(),
                 text.end());
 
-            buffer.push_back(L'\\0');
+            buffer.push_back(L'\0');
             textLines[0] = buffer.data();
 
             CREO_CHECK(
@@ -632,7 +632,7 @@ namespace creo {
                     line.begin(),
                     line.end());
 
-                buffers.back().push_back(L'\\0');
+                buffers.back().push_back(L'\0');
                 textLines[buffers.size() - 1] =
                     buffers.back().data();
             }
@@ -668,13 +668,13 @@ namespace creo {
             result.reserve(text.size());
 
             for (std::size_t i = 0; i < text.size(); ++i) {
-                if (text[i] == L'\\r') {
+                if (text[i] == L'\r') {
                     if (i + 1 < text.size() &&
-                        text[i + 1] == L'\\n') {
+                        text[i + 1] == L'\n') {
                         ++i;
                     }
 
-                    result.push_back(L'\\n');
+                    result.push_back(L'\n');
                 } else {
                     result.push_back(text[i]);
                 }
@@ -703,7 +703,7 @@ namespace creo {
 
             while (position <= text.size()) {
                 const std::size_t lineEnd =
-                    text.find(L'\\n', position);
+                    text.find(L'\n', position);
 
                 const std::wstring paragraph =
                     text.substr(
