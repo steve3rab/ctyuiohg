@@ -383,34 +383,6 @@ namespace creo {
                     detail::kTableSizeCharsTrue));
         }
 
-        void setRowHeight(
-            int row,
-            double height) {
-
-            requireTable();
-
-            if (row < 1 ||
-                row > rowCount()) {
-                throw std::out_of_range(
-                    "ArchiCreoTableHandler::setRowHeight: "
-                    "row index out of range");
-            }
-
-            if (!std::isfinite(height) ||
-                height <= 0.0) {
-                throw std::invalid_argument(
-                    "ArchiCreoTableHandler::setRowHeight: "
-                    "height must be finite and greater than zero");
-            }
-
-            CREO_CHECK(
-                detail::tableRowHeightSet(
-                    &table_,
-                    row,
-                    height,
-                    detail::kTableSizeCharsTrue));
-        }
-
         void mergeCells(
             int startColumn,
             int startRow,
