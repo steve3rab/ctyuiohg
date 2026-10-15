@@ -37,16 +37,10 @@ namespace creo {
         detail::RawMdlSubtype subtype = PROMDLSTYPE_NONE;
     };
 
-    class ArchiCreoWorkspaceHandler;
-
     class ArchiCreoWorkingDirectoryScope final {
       public:
         explicit ArchiCreoWorkingDirectoryScope(
-            const std::filesystem::path& directory) :
-            previous_directory_(
-                ArchiCreoWorkspaceHandler::currentDirectory()) {
-            ArchiCreoWorkspaceHandler::changeDirectory(directory);
-        }
+            const std::filesystem::path& directory);
 
         ArchiCreoWorkingDirectoryScope(
             const ArchiCreoWorkingDirectoryScope&) = delete;
@@ -60,14 +54,7 @@ namespace creo {
         ArchiCreoWorkingDirectoryScope& operator=(
             ArchiCreoWorkingDirectoryScope&&) = delete;
 
-        ~ArchiCreoWorkingDirectoryScope() noexcept {
-            try {
-                ArchiCreoWorkspaceHandler::changeDirectory(
-                    previous_directory_);
-            } catch (...) {
-                // Directory restoration is best effort during cleanup.
-            }
-        }
+        ~ArchiCreoWorkingDirectoryScope() noexcept;
 
       private:
         std::filesystem::path previous_directory_;
@@ -578,5 +565,22 @@ namespace creo {
             return std::filesystem::path(selected_path);
         }
     };
+
+    inline ArchiCreoWorkingDirectoryScope::ArchiCreoWorkingDirectoryScope(
+        const std::filesystem::path& directory) :
+        previous_directory_(
+            ArchiCreoWorkspaceHandler::currentDirectory()) {
+        ArchiCreoWorkspaceHandler::changeDirectory(directory);
+    }
+
+    inline ArchiCreoWorkingDirectoryScope::~ArchiCreoWorkingDirectoryScope()
+        noexcept {
+        try {
+            ArchiCreoWorkspaceHandler::changeDirectory(
+                previous_directory_);
+        } catch (...) {
+            // Directory restoration is best effort during cleanup.
+        }
+    }
 
 }
