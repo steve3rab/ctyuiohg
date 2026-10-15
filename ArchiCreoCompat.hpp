@@ -571,42 +571,6 @@ namespace creo::detail {
             selected_file);
     }
 
-    inline ProErrorCode fileMdlfiletypeOpen(
-        RawName dialog_label,
-        RawMdlFileType* file_types,
-        RawPath* shortcut_path_arr,
-        RawName* shortcut_name_arr,
-        RawPath default_path,
-        RawMdlFileName pre_sel_file_name,
-        RawPath selected_file) {
-        return ::ProFileMdlfiletypeOpen(
-            dialog_label,
-            file_types,
-            shortcut_path_arr,
-            shortcut_name_arr,
-            default_path,
-            pre_sel_file_name,
-            selected_file);
-    }
-
-    inline ProErrorCode fileMdlfiletypeSave(
-        RawName dialog_label,
-        RawMdlFileType* file_types,
-        RawPath* shortcut_path_arr,
-        RawName* shortcut_name_arr,
-        RawPath default_path,
-        RawMdlFileName pre_sel_file_name,
-        RawPath selected_file) {
-        return ::ProFileMdlfiletypeSave(
-            dialog_label,
-            file_types,
-            shortcut_path_arr,
-            shortcut_name_arr,
-            default_path,
-            pre_sel_file_name,
-            selected_file);
-    }
-
     inline ProErrorCode fileMdlnameParse(
         RawPath file_name_w_path,
         RawPath r_path,
