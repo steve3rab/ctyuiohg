@@ -142,13 +142,15 @@ namespace creo {
                     PRO_B_FALSE,
                     &table));
 
-            if (table == nullptr) {
+            ArchiCreoTableHandler result(table);
+
+            if (!result.isValid()) {
                 throw std::runtime_error(
                     "ArchiCreoTableHandler::create: "
-                    "Creo returned a null table handle");
+                    "Creo returned an invalid table handle");
             }
 
-            return ArchiCreoTableHandler(table);
+            return result;
         }
 
         [[nodiscard]] int rowCount() const {
@@ -178,6 +180,48 @@ namespace creo {
                 text);
 
             enableRowAutoHeight(row);
+        }
+
+        void setCellTextNoWrap(
+            int column,
+            int row,
+            const std::wstring& text) {
+
+            requireCell(column, row);
+
+            if (text.find(L'\n') != std::wstring::npos ||
+                text.find(L'\r') != std::wstring::npos) {
+                throw std::invalid_argument(
+                    "ArchiCreoTableHandler::setCellTextNoWrap: "
+                    "text must contain a single line");
+            }
+
+            detail::RawWstringProArray textLines = nullptr;
+
+            CREO_CHECK(
+                detail::wstringProArrayAlloc(
+                    1,
+                    &textLines));
+
+            auto freeTextLines = Defer([&] {
+                CREO_CHECK(
+                    detail::wstringProArrayFree(
+                        &textLines));
+            });
+
+            std::vector<wchar_t> buffer(
+                text.begin(),
+                text.end());
+
+            buffer.push_back(L'\0');
+            textLines[0] = buffer.data();
+
+            CREO_CHECK(
+                detail::tableTextEnter(
+                    &table_,
+                    column,
+                    row,
+                    textLines));
         }
 
         void setCells(
@@ -254,15 +298,34 @@ namespace creo {
                 false);
 
             for (const ArchiCreoTableCell& cell : cells) {
+                const std::wstring normalized =
+                    normalizeLineBreaks(cell.text);
+
+                const std::size_t width =
+                    static_cast<std::size_t>(
+                        getColumnWidthInCharacters(
+                            cell.column));
+
+                const std::vector<std::wstring> lines =
+                    wrapText(normalized, width);
+
                 enterWrappedCellText(
                     cell.column,
                     cell.row,
-                    cell.text);
+                    normalized);
 
                 const std::size_t rowIndex =
                     static_cast<std::size_t>(cell.row);
 
-                if (!autoHeightRows[rowIndex]) {
+                /*
+                 * Only request automatic height when the cell really
+                 * contains more than one rendered line. Enabling it for
+                 * every one-line cell can produce unnecessary row-height
+                 * changes, and Creo applies those changes only after a
+                 * regeneration/table update.
+                 */
+                if (lines.size() > 1 &&
+                    !autoHeightRows[rowIndex]) {
                     enableRowAutoHeight(cell.row);
                     autoHeightRows[rowIndex] = true;
                 }
@@ -590,7 +653,7 @@ namespace creo {
                     line.begin(),
                     line.end());
 
-                buffers.back().push_back(L'\\0');
+                buffers.back().push_back(L'\0');
                 textLines[buffers.size() - 1] =
                     buffers.back().data();
             }
@@ -626,13 +689,13 @@ namespace creo {
             result.reserve(text.size());
 
             for (std::size_t i = 0; i < text.size(); ++i) {
-                if (text[i] == L'\\r') {
+                if (text[i] == L'\r') {
                     if (i + 1 < text.size() &&
-                        text[i + 1] == L'\\n') {
+                        text[i + 1] == L'\n') {
                         ++i;
                     }
 
-                    result.push_back(L'\\n');
+                    result.push_back(L'\n');
                 } else {
                     result.push_back(text[i]);
                 }
@@ -661,7 +724,7 @@ namespace creo {
 
             while (position <= text.size()) {
                 const std::size_t lineEnd =
-                    text.find(L'\\n', position);
+                    text.find(L'\n', position);
 
                 const std::wstring paragraph =
                     text.substr(

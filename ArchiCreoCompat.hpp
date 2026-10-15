@@ -663,8 +663,10 @@ namespace creo::detail {
         }
 
         ProDwgtableInfo info{};
+        constexpr int kSingleTableSegment = 0;
+
         ProErrorCode status = ::ProDwgtableInfoGet(
-            table, PRO_VALUE_UNUSED, &info);
+            table, kSingleTableSegment, &info);
         if (status != kNoError) {
             return status;
         }
@@ -675,7 +677,10 @@ namespace creo::detail {
 
         double world_width = 0.0;
         status = ::ProDwgtableColumnSizeGet(
-            table, PRO_VALUE_UNUSED, column - 1, &world_width);
+            table,
+            kSingleTableSegment,
+            column - 1,
+            &world_width);
         if (status != kNoError) {
             return status;
         }
