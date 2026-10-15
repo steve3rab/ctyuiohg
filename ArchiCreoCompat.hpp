@@ -648,15 +648,6 @@ namespace creo::detail {
             table, column, width, size_type);
     }
 
-    inline ProErrorCode tableRowHeightSet(
-        RawTable* table,
-        int row,
-        double height,
-        RawTableSizeType size_type) {
-        return ::ProDwgtableRowHeightSet(
-            table, row, height, size_type);
-    }
-
     inline ProErrorCode tableDisplay(
         RawTable* table) {
         return ::ProDwgtableDisplay(table);
@@ -842,15 +833,6 @@ namespace creo::detail {
         RawTableSizeType size_type) {
         return ::ProTableColumnWidthSet(
             table, column, width, size_type);
-    }
-
-    inline ProErrorCode tableRowHeightSet(
-        RawTable* table,
-        int row,
-        double height,
-        RawTableSizeType size_type) {
-        return ::ProTableRowHeightSet(
-            table, row, height, size_type);
     }
 
     inline ProErrorCode tableDisplay(
