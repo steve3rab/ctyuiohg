@@ -47,6 +47,11 @@ namespace creo::detail {
     using RawMdlName = ::ProMdlName;
     using RawName = ::ProName;
     using RawMdlFileType = ::ProMdlfileType;
+    using RawMdlSubtype = ::ProMdlsubtype;
+    using RawMdlExtension = ::ProMdlExtension;
+    using RawMdlFileName = ::ProMdlFileName;
+    using RawLine = ::ProLine;
+    using RawFileListOpt = ::ProFileListOpt;
     using RawObjectType = ::ProType;
     using RawSolid = ::ProSolid;
     using RawAssembly = ::ProAssembly;
@@ -500,6 +505,146 @@ namespace creo::detail {
     inline ProErrorCode directoryCurrentGet(
         RawPath path) {
         return ::ProDirectoryCurrentGet(path);
+    }
+
+    inline ProErrorCode filesList(
+        RawPath directory_path,
+        RawLine filter,
+        RawFileListOpt listing_option,
+        RawPath** p_file_name_array,
+        RawPath** p_subdir_name_array) {
+        return ::ProFilesList(
+            directory_path,
+            filter,
+            listing_option,
+            p_file_name_array,
+            p_subdir_name_array);
+    }
+
+    inline ProErrorCode directoryChoose(
+        RawName dialog_label,
+        RawPath* shortcut_path_arr,
+        RawName* shortcut_name_arr,
+        RawPath default_path,
+        RawPath selected_path) {
+        return ::ProDirectoryChoose(
+            dialog_label,
+            shortcut_path_arr,
+            shortcut_name_arr,
+            default_path,
+            selected_path);
+    }
+
+    inline ProErrorCode fileMdlnameOpen(
+        RawName dialog_label,
+        RawLine filter_string,
+        RawPath* shortcut_path_arr,
+        RawName* shortcut_name_arr,
+        RawPath default_path,
+        RawMdlFileName pre_sel_file_name,
+        RawPath selected_file) {
+        return ::ProFileMdlnameOpen(
+            dialog_label,
+            filter_string,
+            shortcut_path_arr,
+            shortcut_name_arr,
+            default_path,
+            pre_sel_file_name,
+            selected_file);
+    }
+
+    inline ProErrorCode fileMdlnameSave(
+        RawName dialog_label,
+        RawLine filter_string,
+        RawPath* shortcut_path_arr,
+        RawName* shortcut_name_arr,
+        RawPath default_path,
+        RawMdlFileName pre_sel_file_name,
+        RawPath selected_file) {
+        return ::ProFileMdlnameSave(
+            dialog_label,
+            filter_string,
+            shortcut_path_arr,
+            shortcut_name_arr,
+            default_path,
+            pre_sel_file_name,
+            selected_file);
+    }
+
+    inline ProErrorCode fileMdlfiletypeOpen(
+        RawName dialog_label,
+        RawMdlFileType* file_types,
+        RawPath* shortcut_path_arr,
+        RawName* shortcut_name_arr,
+        RawPath default_path,
+        RawMdlFileName pre_sel_file_name,
+        RawPath selected_file) {
+        return ::ProFileMdlfiletypeOpen(
+            dialog_label,
+            file_types,
+            shortcut_path_arr,
+            shortcut_name_arr,
+            default_path,
+            pre_sel_file_name,
+            selected_file);
+    }
+
+    inline ProErrorCode fileMdlfiletypeSave(
+        RawName dialog_label,
+        RawMdlFileType* file_types,
+        RawPath* shortcut_path_arr,
+        RawName* shortcut_name_arr,
+        RawPath default_path,
+        RawMdlFileName pre_sel_file_name,
+        RawPath selected_file) {
+        return ::ProFileMdlfiletypeSave(
+            dialog_label,
+            file_types,
+            shortcut_path_arr,
+            shortcut_name_arr,
+            default_path,
+            pre_sel_file_name,
+            selected_file);
+    }
+
+    inline ProErrorCode fileMdlnameParse(
+        RawPath file_name_w_path,
+        RawPath r_path,
+        RawMdlName r_file_name,
+        RawMdlExtension r_extension,
+        int* r_version) {
+        return ::ProFileMdlnameParse(
+            file_name_w_path,
+            r_path,
+            r_file_name,
+            r_extension,
+            r_version);
+    }
+
+    inline ProErrorCode pathMdlnameCreate(
+        RawPath path,
+        RawMdlName file_name,
+        RawMdlExtension extension,
+        int version,
+        RawPath result) {
+        return ::ProPathMdlnameCreate(
+            path,
+            file_name,
+            extension,
+            version,
+            result);
+    }
+
+    inline ProErrorCode fileSubtypeGet(
+        RawPath file,
+        RawMdlFileType* file_type,
+        RawMdlType* model_type,
+        RawMdlSubtype* subtype) {
+        return ::ProFileSubtypeGet(
+            file,
+            file_type,
+            model_type,
+            subtype);
     }
 
 
