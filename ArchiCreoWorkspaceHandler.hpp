@@ -2,6 +2,7 @@
 
 #include "ArchiCreoCompat.hpp"
 #include "ArchiCreoErrorHandler.hpp"
+#include "ArchiScopeGuard.hpp"
 
 #include <algorithm>
 #include <filesystem>
