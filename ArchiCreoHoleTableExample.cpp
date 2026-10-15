@@ -193,11 +193,19 @@ void fillHoleTableExample(
     }
 
     /*
-     * Write the title before merging the first row.
-     *
-     * The text is inserted without wrapping because the final cell spans
-     * all five columns. The merge itself is delayed until the table
-     * contents are configured, avoiding an intermediate remesh.
+     * Keep the legacy order: merge the title row immediately after
+     * table creation, before inserting the remaining cells.
+     */
+    table.mergeCells(
+        1,
+        1,
+        kHoleTableColumns,
+        1,
+        false);
+
+    /*
+     * The title is already a merged cell, so do not run it through the
+     * generic wrapping code.
      */
     table.setCellTextNoWrap(
         1,
@@ -304,17 +312,6 @@ void fillHoleTableExample(
      *   - row auto-height
      */
     table.setCells(cells);
-
-    /*
-     * Merge the title row only after all other cells are populated.
-     * No display/repaint is requested.
-     */
-    table.mergeCells(
-        1,
-        1,
-        kHoleTableColumns,
-        1,
-        false);
 
     /*
      * Preserve the legacy hole-note processing.
