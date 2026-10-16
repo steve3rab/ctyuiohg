@@ -223,9 +223,6 @@ namespace creo {
             for (const std::wstring& fileName : files.files) {
                 ArchiCreoFilePathInfo parsed{};
 
-                const detail::RawPath file_path{};
-                (void)file_path;
-
                 detail::RawPath parse_input{};
                 copyWideString(
                     fileName,
