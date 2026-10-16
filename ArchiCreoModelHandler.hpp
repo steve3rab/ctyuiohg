@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ArchiCreoCompat.hpp"
+#include "ArchiCreoWorkspaceHandler.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -136,10 +137,7 @@ namespace creo {
         }
 
         static std::filesystem::path creoWorkingDirectory() {
-            wchar_t buffer[PRO_PATH_SIZE] = {};
-            CREO_CHECK(
-                detail::directoryCurrentGet(buffer));
-            return std::filesystem::path(buffer);
+            return ArchiCreoWorkspaceHandler::currentDirectory();
         }
 
         static ArchiCreoModelHandler createPartFromTemplate(
@@ -704,19 +702,9 @@ namespace creo {
                     ": template has an unexpected Creo model type");
             }
 
-            wchar_t previous_directory[PRO_PATH_SIZE] = {};
-            CREO_CHECK(detail::directoryCurrentGet(previous_directory));
-
-            auto restore_directory = Defer([&] {
-                if (previous_directory[0] != L'\0') {
-                    (void)detail::directoryChange(previous_directory);
-                }
-            });
-
-            wchar_t mutable_destination[PRO_PATH_SIZE] = {};
-            std::copy(destination_path.begin(), destination_path.end(),
-                      mutable_destination);
-            CREO_CHECK(detail::directoryChange(mutable_destination));
+            auto working_directory_scope =
+                ArchiCreoWorkspaceHandler::scopedDirectory(
+                    destination_directory);
 
             detail::RawMdlName new_name{};
             std::copy(model_name.begin(), model_name.end(), new_name);

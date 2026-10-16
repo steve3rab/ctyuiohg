@@ -1,0 +1,406 @@
+#pragma once
+
+#include "ArchiCreoCompat.hpp"
+#include "ArchiCreoErrorHandler.hpp"
+#include "ArchiCreoModelHandler.hpp"
+#include "ArchiCreoWindowHandler.hpp"
+#include "ArchiScopeGuard.hpp"
+
+#include <algorithm>
+#include <filesystem>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+namespace creo {
+
+    class ArchiCreoPdfOptions final {
+      public:
+        ArchiCreoPdfOptions() {
+            CREO_CHECK(
+                detail::pdfOptionsAlloc(
+                    &options_));
+
+            if (options_ == nullptr) {
+                throw std::runtime_error(
+                    "ArchiCreoPdfOptions: Creo returned a null options handle");
+            }
+        }
+
+        ArchiCreoPdfOptions(
+            const ArchiCreoPdfOptions&) = delete;
+
+        ArchiCreoPdfOptions& operator=(
+            const ArchiCreoPdfOptions&) = delete;
+
+        ArchiCreoPdfOptions(
+            ArchiCreoPdfOptions&& other) noexcept :
+            options_(other.options_) {
+            other.options_ = nullptr;
+        }
+
+        ArchiCreoPdfOptions& operator=(
+            ArchiCreoPdfOptions&& other) noexcept {
+            if (this == &other) {
+                return *this;
+            }
+
+            reset();
+            options_ = other.options_;
+            other.options_ = nullptr;
+            return *this;
+        }
+
+        ~ArchiCreoPdfOptions() noexcept {
+            reset();
+        }
+
+        [[nodiscard]] bool isValid() const noexcept {
+            return options_ != nullptr;
+        }
+
+        [[nodiscard]] detail::RawPdfOptions raw() const noexcept {
+            return options_;
+        }
+
+        void setInt(
+            detail::RawPdfOptionType type,
+            int value) {
+            requireHandle();
+
+            CREO_CHECK(
+                detail::pdfOptionsIntPropertySet(
+                    options_,
+                    type,
+                    value));
+        }
+
+        void setBool(
+            detail::RawPdfOptionType type,
+            bool value) {
+            requireHandle();
+
+            CREO_CHECK(
+                detail::pdfOptionsBoolPropertySet(
+                    options_,
+                    type,
+                    value
+                        ? PRO_B_TRUE
+                        : PRO_B_FALSE));
+        }
+
+        void setString(
+            detail::RawPdfOptionType type,
+            const std::wstring& value) {
+            requireHandle();
+
+            if (value.find(L'\0') != std::wstring::npos) {
+                throw std::invalid_argument(
+                    "ArchiCreoPdfOptions::setString: "
+                    "value contains an embedded null character");
+            }
+
+            std::vector<wchar_t> buffer(
+                value.begin(),
+                value.end());
+
+            buffer.push_back(L'\0');
+
+            CREO_CHECK(
+                detail::pdfOptionsStringPropertySet(
+                    options_,
+                    type,
+                    buffer.data()));
+        }
+
+        void setNullableString(
+            detail::RawPdfOptionType type,
+            const wchar_t* value) {
+            requireHandle();
+
+            if (value == nullptr) {
+                CREO_CHECK(
+                    detail::pdfOptionsStringPropertySet(
+                        options_,
+                        type,
+                        nullptr));
+                return;
+            }
+
+            setString(
+                type,
+                std::wstring(value));
+        }
+
+        void setDouble(
+            detail::RawPdfOptionType type,
+            double value) {
+            requireHandle();
+
+            CREO_CHECK(
+                detail::pdfOptionsDoublePropertySet(
+                    options_,
+                    type,
+                    value));
+        }
+
+      private:
+        void requireHandle() const {
+            if (options_ == nullptr) {
+                throw std::runtime_error(
+                    "ArchiCreoPdfOptions: invalid options handle");
+            }
+        }
+
+        void reset() noexcept {
+            if (options_ == nullptr) {
+                return;
+            }
+
+            (void)detail::pdfOptionsFree(
+                options_);
+
+            options_ = nullptr;
+        }
+
+        detail::RawPdfOptions options_ = nullptr;
+    };
+
+    class ArchiCreoPdfHandler final {
+      public:
+        ArchiCreoPdfHandler() = delete;
+
+        static void exportModel(
+            const ArchiCreoModelHandler& model,
+            const std::filesystem::path& outputFile,
+            const ArchiCreoPdfOptions& options) {
+
+            requireExportableModel(
+                model,
+                "ArchiCreoPdfHandler::exportModel");
+
+            detail::RawPath output_path{};
+            makePdfPath(
+                outputFile,
+                output_path,
+                "ArchiCreoPdfHandler::exportModel");
+
+            if (!options.isValid()) {
+                throw std::invalid_argument(
+                    "ArchiCreoPdfHandler::exportModel: "
+                    "invalid PDF options");
+            }
+
+            model.display();
+
+            CREO_CHECK(
+                detail::pdfExport(
+                    model.raw(),
+                    output_path,
+                    options.raw()));
+        }
+
+        static void exportModel(
+            const ArchiCreoModelHandler& model,
+            const std::filesystem::path& outputFile) {
+
+            ArchiCreoPdfOptions options;
+            exportModel(
+                model,
+                outputFile,
+                options);
+        }
+
+        static void exportDrawing(
+            const ArchiCreoModelHandler& drawing,
+            const std::filesystem::path& outputFile) {
+
+            if (!drawing.isValid()) {
+                throw std::invalid_argument(
+                    "ArchiCreoPdfHandler::exportDrawing: "
+                    "invalid drawing model");
+            }
+
+            if (drawing.type() != PRO_MDL_DRAWING) {
+                throw std::invalid_argument(
+                    "ArchiCreoPdfHandler::exportDrawing: "
+                    "model is not a drawing");
+            }
+
+            detail::RawPath output_path{};
+            makePdfPath(
+                outputFile,
+                output_path,
+                "ArchiCreoPdfHandler::exportDrawing");
+
+            drawing.display();
+
+            ArchiCreoPdfOptions options;
+            CREO_CHECK(
+                detail::pdfExport(
+                    drawing.raw(),
+                    output_path,
+                    options.raw()));
+        }
+
+        static void exportDrawingWithProfile(
+            const ArchiCreoModelHandler& drawing,
+            const std::filesystem::path& outputFile,
+            const std::filesystem::path& profile) {
+
+            if (!drawing.isValid()) {
+                throw std::invalid_argument(
+                    "ArchiCreoPdfHandler::exportDrawingWithProfile: "
+                    "invalid drawing model");
+            }
+
+            if (drawing.type() != PRO_MDL_DRAWING) {
+                throw std::invalid_argument(
+                    "ArchiCreoPdfHandler::exportDrawingWithProfile: "
+                    "model is not a drawing");
+            }
+
+            detail::RawPath output_path{};
+            makePdfPath(
+                outputFile,
+                output_path,
+                "ArchiCreoPdfHandler::exportDrawingWithProfile");
+
+            detail::RawPath profile_path{};
+            makePath(
+                profile,
+                profile_path,
+                "ArchiCreoPdfHandler::exportDrawingWithProfile");
+
+            const ArchiCreoWindowHandler previous_window =
+                ArchiCreoWindowHandler::current();
+
+            auto restore_current_window = Defer([&] {
+                if (previous_window.isValid()) {
+                    (void)detail::windowCurrentSet(
+                        previous_window.id());
+                }
+            });
+
+            drawing.displayAndActivate();
+
+            CREO_CHECK(
+                detail::pdfWithProfileExport(
+                    drawing.raw(),
+                    output_path,
+                    profile_path));
+        }
+
+      private:
+        static void requireExportableModel(
+            const ArchiCreoModelHandler& model,
+            const char* operation) {
+
+            if (!model.isValid()) {
+                throw std::invalid_argument(
+                    std::string(operation) +
+                    ": invalid model");
+            }
+
+            const auto model_type =
+                model.type();
+
+            if (model_type != PRO_MDL_DRAWING &&
+                model_type != PRO_MDL_PART &&
+                model_type != PRO_MDL_ASSEMBLY) {
+                throw std::invalid_argument(
+                    std::string(operation) +
+                    ": unsupported model type for PDF export");
+            }
+        }
+
+        static void makePdfPath(
+            const std::filesystem::path& outputFile,
+            detail::RawPath output,
+            const char* operation) {
+
+            if (outputFile.empty()) {
+                throw std::invalid_argument(
+                    std::string(operation) +
+                    ": empty output file");
+            }
+
+            const std::wstring value =
+                outputFile.wstring();
+
+            if (value.empty()) {
+                throw std::invalid_argument(
+                    std::string(operation) +
+                    ": output file path is empty");
+            }
+
+            const std::wstring extension =
+                outputFile.extension().wstring();
+
+            if (!isPdfExtension(extension)) {
+                throw std::invalid_argument(
+                    std::string(operation) +
+                    ": output file must have a .pdf extension");
+            }
+
+            makePath(
+                outputFile,
+                output,
+                operation);
+        }
+
+        static void makePath(
+            const std::filesystem::path& file,
+            detail::RawPath output,
+            const char* operation) {
+
+            const std::wstring value =
+                file.wstring();
+
+            if (value.empty()) {
+                throw std::invalid_argument(
+                    std::string(operation) +
+                    ": empty path");
+            }
+
+            if (value.find(L'\0') != std::wstring::npos) {
+                throw std::invalid_argument(
+                    std::string(operation) +
+                    ": path contains an embedded null character");
+            }
+
+            if (value.size() >=
+                static_cast<std::size_t>(
+                    PRO_PATH_SIZE)) {
+                throw std::length_error(
+                    std::string(operation) +
+                    ": path exceeds PRO_PATH_SIZE");
+            }
+
+            std::copy(
+                value.begin(),
+                value.end(),
+                output);
+
+            output[value.size()] = L'\0';
+        }
+
+        static bool isPdfExtension(
+            const std::wstring& extension) noexcept {
+
+            if (extension.size() != 4) {
+                return false;
+            }
+
+            return
+                (extension[0] == L'.') &&
+                (extension[1] == L'p' ||
+                 extension[1] == L'P') &&
+                (extension[2] == L'd' ||
+                 extension[2] == L'D') &&
+                (extension[3] == L'f' ||
+                 extension[3] == L'F');
+        }
+    };
+
+}
