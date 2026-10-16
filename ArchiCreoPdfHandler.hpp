@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace creo {
 
@@ -91,26 +92,23 @@ namespace creo {
             const std::wstring& value) {
             requireHandle();
 
-            if (value.size() >=
-                static_cast<std::size_t>(
-                    PRO_PATH_SIZE)) {
-                throw std::length_error(
+            if (value.find(L'\0') != std::wstring::npos) {
+                throw std::invalid_argument(
                     "ArchiCreoPdfOptions::setString: "
-                    "value is too long");
+                    "value contains an embedded null character");
             }
 
-            wchar_t buffer[PRO_PATH_SIZE] = {};
-
-            std::copy(
+            std::vector<wchar_t> buffer(
                 value.begin(),
-                value.end(),
-                buffer);
+                value.end());
+
+            buffer.push_back(L'\0');
 
             CREO_CHECK(
                 detail::pdfOptionsStringPropertySet(
                     options_,
                     type,
-                    buffer));
+                    buffer.data()));
         }
 
         void setNullableString(
@@ -190,11 +188,24 @@ namespace creo {
                     "invalid PDF options");
             }
 
+            model.display();
+
             CREO_CHECK(
                 detail::pdfExport(
                     model.raw(),
                     output_path,
                     options.raw()));
+        }
+
+        static void exportModel(
+            const ArchiCreoModelHandler& model,
+            const std::filesystem::path& outputFile) {
+
+            ArchiCreoPdfOptions options;
+            exportModel(
+                model,
+                outputFile,
+                options);
         }
 
         static void exportDrawing(
@@ -217,6 +228,8 @@ namespace creo {
                 makePdfPath(
                     outputFile,
                     "ArchiCreoPdfHandler::exportDrawing");
+
+            drawing.display();
 
             ArchiCreoPdfOptions options;
             CREO_CHECK(
@@ -253,11 +266,23 @@ namespace creo {
                     profile,
                     "ArchiCreoPdfHandler::exportDrawingWithProfile");
 
+            const ArchiCreoWindowHandler previous_window =
+                ArchiCreoWindowHandler::current();
+
+            auto restore_current_window = Defer([&] {
+                if (previous_window.isValid()) {
+                    (void)detail::windowCurrentSet(
+                        previous_window.id());
+                }
+            });
+
+            drawing.displayAndActivate();
+
             CREO_CHECK(
                 detail::pdfWithProfileExport(
                     drawing.raw(),
                     output_path,
-                    profile_path));
+                    profile));
         }
 
       private:
