@@ -128,6 +128,10 @@ namespace creo {
             }
 
             if (has_filter) {
+                validateFilter(
+                    filter,
+                    "ArchiCreoWorkspaceHandler::listFiles");
+
                 copyWideString(
                     filter,
                     filter_buffer,
@@ -201,14 +205,23 @@ namespace creo {
 
         static std::optional<ArchiCreoFileInfo> findLatestModelFile(
             const std::wstring& modelName,
+            ArchiCreoModelFileType type,
+            const std::filesystem::path& directory = {}) {
+
+            return findLatestModelFile(
+                modelName,
+                std::optional<ArchiCreoModelFileType>(type),
+                directory);
+        }
+
+        static std::optional<ArchiCreoFileInfo> findLatestModelFile(
+            const std::wstring& modelName,
             const std::optional<ArchiCreoModelFileType>& type = std::nullopt,
             const std::filesystem::path& directory = {}) {
 
-            if (modelName.empty()) {
-                throw std::invalid_argument(
-                    "ArchiCreoWorkspaceHandler::findLatestModelFile: "
-                    "empty model name");
-            }
+            validateModelName(
+                modelName,
+                "ArchiCreoWorkspaceHandler::findLatestModelFile");
 
             const ArchiCreoFileList files =
                 listFiles(
@@ -221,31 +234,9 @@ namespace creo {
             std::optional<ArchiCreoFileInfo> match;
 
             for (const std::wstring& fileName : files.files) {
-                ArchiCreoFilePathInfo parsed{};
-
-                detail::RawPath parse_input{};
-                copyWideString(
-                    fileName,
-                    parse_input,
-                    "ArchiCreoWorkspaceHandler::findLatestModelFile");
-
-                detail::RawPath parsed_directory{};
-                detail::RawMdlName parsed_name{};
-                detail::RawMdlExtension parsed_extension{};
-                int version = PRO_VALUE_UNUSED;
-
-                CREO_CHECK(
-                    detail::fileMdlnameParse(
-                        parse_input,
-                        parsed_directory,
-                        parsed_name,
-                        parsed_extension,
-                        &version));
-
-                parsed.directory = parsed_directory;
-                parsed.name = parsed_name;
-                parsed.extension = parsed_extension;
-                parsed.version = version;
+                const ArchiCreoFilePathInfo parsed =
+                    parseFileName(
+                        std::filesystem::path(fileName));
 
                 if (parsed.name != modelName) {
                     continue;
@@ -269,9 +260,7 @@ namespace creo {
 
                 if (!type.has_value() &&
                     candidate.parsed.extension !=
-                        match->parsed.extension &&
-                    candidate.parsed.version ==
-                        match->parsed.version) {
+                        match->parsed.extension) {
                     throw std::invalid_argument(
                         "ArchiCreoWorkspaceHandler::"
                         "findLatestModelFile: "
@@ -552,6 +541,76 @@ namespace creo {
             return nullptr;
         }
 
+        static void validateModelName(
+            const std::wstring& value,
+            const char* operation) {
+
+            if (value.empty()) {
+                throw std::invalid_argument(
+                    std::string(operation) +
+                    ": empty model name");
+            }
+
+            if (value.find(L'\0') != std::wstring::npos) {
+                throw std::invalid_argument(
+                    std::string(operation) +
+                    ": model name contains an embedded null character");
+            }
+
+            if (value.size() >=
+                static_cast<std::size_t>(
+                    PRO_MDLNAME_SIZE)) {
+                throw std::length_error(
+                    std::string(operation) +
+                    ": model name exceeds Creo's model-name buffer");
+            }
+        }
+
+        static void validateFilter(
+            const std::wstring& value,
+            const char* operation) {
+
+            if (value.find(L'\0') != std::wstring::npos) {
+                throw std::invalid_argument(
+                    std::string(operation) +
+                    ": filter contains an embedded null character");
+            }
+
+            if (value.size() >=
+                static_cast<std::size_t>(
+                    PRO_LINE_SIZE)) {
+                throw std::length_error(
+                    std::string(operation) +
+                    ": filter exceeds PRO_LINE_SIZE");
+            }
+
+            std::size_t tokenStart = 0;
+            while (tokenStart <= value.size()) {
+                const std::size_t separator =
+                    value.find(L',', tokenStart);
+                const std::size_t tokenLength =
+                    separator == std::wstring::npos
+                        ? value.size() - tokenStart
+                        : separator - tokenStart;
+
+                if (tokenLength == 0 ||
+                    tokenLength >=
+                        static_cast<std::size_t>(
+                            PRO_NAME_SIZE)) {
+                    throw std::length_error(
+                        std::string(operation) +
+                        ": each file filter must be shorter than "
+                        "PRO_NAME_SIZE characters");
+                }
+
+                if (separator == std::wstring::npos) {
+                    break;
+                }
+
+                tokenStart = separator + 1;
+            }
+        }
+
         static void validatePath(
             const std::wstring& value,
             const char* operation) {
@@ -560,6 +619,12 @@ namespace creo {
                 throw std::invalid_argument(
                     std::string(operation) +
                     ": empty path");
+            }
+
+            if (value.find(L'\0') != std::wstring::npos) {
+                throw std::invalid_argument(
+                    std::string(operation) +
+                    ": path contains an embedded null character");
             }
 
             if (value.size() >=
@@ -575,6 +640,12 @@ namespace creo {
             const std::wstring& value,
             wchar_t (&destination)[N],
             const char* operation) {
+
+            if (value.find(L'\0') != std::wstring::npos) {
+                throw std::invalid_argument(
+                    std::string(operation) +
+                    ": string contains an embedded null character");
+            }
 
             if (value.size() >= N) {
                 throw std::length_error(
