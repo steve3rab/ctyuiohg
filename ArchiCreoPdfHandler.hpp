@@ -3,7 +3,6 @@
 #include "ArchiCreoCompat.hpp"
 #include "ArchiCreoErrorHandler.hpp"
 #include "ArchiCreoModelHandler.hpp"
-#include "ArchiScopeGuard.hpp"
 
 #include <algorithm>
 #include <filesystem>
