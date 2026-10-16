@@ -20,6 +20,12 @@ namespace creo {
         LatestSorted
     };
 
+    enum class ArchiCreoModelFileType {
+        Part,
+        Drawing,
+        Assembly
+    };
+
     struct ArchiCreoFileList {
         std::vector<std::wstring> files;
         std::vector<std::wstring> directories;
@@ -30,6 +36,11 @@ namespace creo {
         std::wstring name;
         std::wstring extension;
         int version = PRO_VALUE_UNUSED;
+    };
+
+    struct ArchiCreoFileInfo {
+        std::wstring fileName;
+        ArchiCreoFilePathInfo parsed;
     };
 
     struct ArchiCreoFileTypeInfo {
@@ -174,6 +185,109 @@ namespace creo {
                 result.directories);
 
             return result;
+        }
+
+        static ArchiCreoFileList listModelFiles(
+            ArchiCreoModelFileType type,
+            const std::filesystem::path& directory = {},
+            ArchiCreoFileListMode mode =
+                ArchiCreoFileListMode::LatestSorted) {
+
+            return listFiles(
+                directory,
+                modelFileFilter(type),
+                mode);
+        }
+
+        static std::optional<ArchiCreoFileInfo> findLatestModelFile(
+            const std::wstring& modelName,
+            const std::optional<ArchiCreoModelFileType>& type = std::nullopt,
+            const std::filesystem::path& directory = {}) {
+
+            if (modelName.empty()) {
+                throw std::invalid_argument(
+                    "ArchiCreoWorkspaceHandler::findLatestModelFile: "
+                    "empty model name");
+            }
+
+            const ArchiCreoFileList files =
+                listFiles(
+                    directory,
+                    type.has_value()
+                        ? modelFileFilter(*type)
+                        : modelFileFilterAll(),
+                    ArchiCreoFileListMode::LatestSorted);
+
+            std::optional<ArchiCreoFileInfo> match;
+
+            for (const std::wstring& fileName : files.files) {
+                ArchiCreoFilePathInfo parsed{};
+
+                const detail::RawPath file_path{};
+                (void)file_path;
+
+                detail::RawPath parse_input{};
+                copyWideString(
+                    fileName,
+                    parse_input,
+                    "ArchiCreoWorkspaceHandler::findLatestModelFile");
+
+                detail::RawPath parsed_directory{};
+                detail::RawMdlName parsed_name{};
+                detail::RawMdlExtension parsed_extension{};
+                int version = PRO_VALUE_UNUSED;
+
+                CREO_CHECK(
+                    detail::fileMdlnameParse(
+                        parse_input,
+                        parsed_directory,
+                        parsed_name,
+                        parsed_extension,
+                        &version));
+
+                parsed.directory = parsed_directory;
+                parsed.name = parsed_name;
+                parsed.extension = parsed_extension;
+                parsed.version = version;
+
+                if (parsed.name != modelName) {
+                    continue;
+                }
+
+                if (type.has_value() &&
+                    !extensionMatchesType(
+                        parsed.extension,
+                        *type)) {
+                    continue;
+                }
+
+                ArchiCreoFileInfo candidate;
+                candidate.fileName = fileName;
+                candidate.parsed = std::move(parsed);
+
+                if (!match.has_value()) {
+                    match = std::move(candidate);
+                    continue;
+                }
+
+                if (!type.has_value() &&
+                    candidate.parsed.extension !=
+                        match->parsed.extension &&
+                    candidate.parsed.version ==
+                        match->parsed.version) {
+                    throw std::invalid_argument(
+                        "ArchiCreoWorkspaceHandler::"
+                        "findLatestModelFile: "
+                        "model name is ambiguous; specify a file type");
+                }
+
+                if (candidate.parsed.version >
+                    match->parsed.version) {
+                    match = std::move(candidate);
+                }
+            }
+
+            return match;
         }
 
         static std::optional<std::filesystem::path> chooseDirectory(
@@ -388,6 +502,59 @@ namespace creo {
         }
 
       private:
+        static const wchar_t* modelFileFilter(
+            ArchiCreoModelFileType type) {
+
+            switch (type) {
+                case ArchiCreoModelFileType::Part:
+                    return L"*.prt";
+
+                case ArchiCreoModelFileType::Drawing:
+                    return L"*.drw";
+
+                case ArchiCreoModelFileType::Assembly:
+                    return L"*.asm";
+            }
+
+            throw std::invalid_argument(
+                "ArchiCreoWorkspaceHandler: invalid model file type");
+        }
+
+        static const wchar_t* modelFileFilterAll() {
+            return L"*.prt,*.drw,*.asm";
+        }
+
+        static bool extensionMatchesType(
+            const std::wstring& extension,
+            ArchiCreoModelFileType type) {
+
+            const wchar_t* expected =
+                extensionForType(type);
+
+            if (expected == nullptr) {
+                return false;
+            }
+
+            return extension == expected;
+        }
+
+        static const wchar_t* extensionForType(
+            ArchiCreoModelFileType type) {
+
+            switch (type) {
+                case ArchiCreoModelFileType::Part:
+                    return L"prt";
+
+                case ArchiCreoModelFileType::Drawing:
+                    return L"drw";
+
+                case ArchiCreoModelFileType::Assembly:
+                    return L"asm";
+            }
+
+            return nullptr;
+        }
+
         static void validatePath(
             const std::wstring& value,
             const char* operation) {
