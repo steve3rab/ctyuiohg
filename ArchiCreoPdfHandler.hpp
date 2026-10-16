@@ -3,6 +3,8 @@
 #include "ArchiCreoCompat.hpp"
 #include "ArchiCreoErrorHandler.hpp"
 #include "ArchiCreoModelHandler.hpp"
+#include "ArchiCreoWindowHandler.hpp"
+#include "ArchiScopeGuard.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -282,7 +284,7 @@ namespace creo {
                 detail::pdfWithProfileExport(
                     drawing.raw(),
                     output_path,
-                    profile));
+                    profile_path));
         }
 
       private:
