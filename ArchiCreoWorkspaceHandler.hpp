@@ -258,18 +258,12 @@ namespace creo {
                     continue;
                 }
 
-                if (!type.has_value() &&
-                    candidate.parsed.extension !=
-                        match->parsed.extension) {
+                if (candidate.parsed.extension !=
+                    match->parsed.extension) {
                     throw std::invalid_argument(
                         "ArchiCreoWorkspaceHandler::"
                         "findLatestModelFile: "
                         "model name is ambiguous; specify a file type");
-                }
-
-                if (candidate.parsed.version >
-                    match->parsed.version) {
-                    match = std::move(candidate);
                 }
             }
 
