@@ -18,6 +18,7 @@
 #include <ProView.h>
 #include <ProParameter.h>
 #include <ProParamval.h>
+#include <ProPDF.h>
 #include <ProSolid.h>
 #if defined(CREO10) && defined(CREO13)
 #error "Define only one of CREO10 or CREO13 when building ArchiCreo"
@@ -75,6 +76,8 @@ namespace creo::detail {
     using RawSolidDispCompFilterAction = ::ProSolidDispCompFilterAction;
     using RawEcadType = ::ProTKEcadType;
     using RawEcadImpOpts = ::ProEcadImpOpts;
+    using RawPdfOptions = ::ProPDFOptions;
+    using RawPdfOptionType = ::ProPDFOptionType;
 #if defined(CREO10)
     using RawTable = ::ProDwgtable;
     using RawTableData = ::ProDwgtabledata;
@@ -505,6 +508,78 @@ namespace creo::detail {
     inline ProErrorCode directoryCurrentGet(
         RawPath path) {
         return ::ProDirectoryCurrentGet(path);
+    }
+
+    inline ProErrorCode pdfOptionsAlloc(
+        RawPdfOptions* p_options) {
+        return ::ProPDFoptionsAlloc(
+            p_options);
+    }
+
+    inline ProErrorCode pdfOptionsFree(
+        RawPdfOptions options) {
+        return ::ProPDFoptionsFree(
+            options);
+    }
+
+    inline ProErrorCode pdfOptionsIntPropertySet(
+        RawPdfOptions options,
+        RawPdfOptionType type,
+        int value) {
+        return ::ProPDFoptionsIntpropertySet(
+            options,
+            type,
+            value);
+    }
+
+    inline ProErrorCode pdfOptionsBoolPropertySet(
+        RawPdfOptions options,
+        RawPdfOptionType type,
+        RawBoolean value) {
+        return ::ProPDFoptionsBoolpropertySet(
+            options,
+            type,
+            value);
+    }
+
+    inline ProErrorCode pdfOptionsStringPropertySet(
+        RawPdfOptions options,
+        RawPdfOptionType type,
+        wchar_t* value) {
+        return ::ProPDFoptionsStringpropertySet(
+            options,
+            type,
+            value);
+    }
+
+    inline ProErrorCode pdfOptionsDoublePropertySet(
+        RawPdfOptions options,
+        RawPdfOptionType type,
+        double value) {
+        return ::ProPDFoptionsDoublepropertySet(
+            options,
+            type,
+            value);
+    }
+
+    inline ProErrorCode pdfExport(
+        RawMdl model,
+        RawPath output_file,
+        RawPdfOptions options) {
+        return ::ProPDFExport(
+            model,
+            output_file,
+            options);
+    }
+
+    inline ProErrorCode pdfWithProfileExport(
+        RawMdl model,
+        RawPath output_file,
+        RawPath profile) {
+        return ::ProPDFWithProfileExport(
+            model,
+            output_file,
+            profile);
     }
 
     inline ProErrorCode filesList(
