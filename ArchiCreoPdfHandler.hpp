@@ -179,10 +179,11 @@ namespace creo {
                 model,
                 "ArchiCreoPdfHandler::exportModel");
 
-            const detail::RawPath output_path =
-                makePdfPath(
-                    outputFile,
-                    "ArchiCreoPdfHandler::exportModel");
+            detail::RawPath output_path{};
+            makePdfPath(
+                outputFile,
+                output_path,
+                "ArchiCreoPdfHandler::exportModel");
 
             if (!options.isValid()) {
                 throw std::invalid_argument(
@@ -226,10 +227,11 @@ namespace creo {
                     "model is not a drawing");
             }
 
-            const detail::RawPath output_path =
-                makePdfPath(
-                    outputFile,
-                    "ArchiCreoPdfHandler::exportDrawing");
+            detail::RawPath output_path{};
+            makePdfPath(
+                outputFile,
+                output_path,
+                "ArchiCreoPdfHandler::exportDrawing");
 
             drawing.display();
 
@@ -258,15 +260,17 @@ namespace creo {
                     "model is not a drawing");
             }
 
-            const detail::RawPath output_path =
-                makePdfPath(
-                    outputFile,
-                    "ArchiCreoPdfHandler::exportDrawingWithProfile");
+            detail::RawPath output_path{};
+            makePdfPath(
+                outputFile,
+                output_path,
+                "ArchiCreoPdfHandler::exportDrawingWithProfile");
 
-            const detail::RawPath profile_path =
-                makePath(
-                    profile,
-                    "ArchiCreoPdfHandler::exportDrawingWithProfile");
+            detail::RawPath profile_path{};
+            makePath(
+                profile,
+                profile_path,
+                "ArchiCreoPdfHandler::exportDrawingWithProfile");
 
             const ArchiCreoWindowHandler previous_window =
                 ArchiCreoWindowHandler::current();
@@ -310,8 +314,9 @@ namespace creo {
             }
         }
 
-        static detail::RawPath makePdfPath(
+        static void makePdfPath(
             const std::filesystem::path& outputFile,
+            detail::RawPath output,
             const char* operation) {
 
             if (outputFile.empty()) {
@@ -338,13 +343,15 @@ namespace creo {
                     ": output file must have a .pdf extension");
             }
 
-            return makePath(
+            makePath(
                 outputFile,
+                output,
                 operation);
         }
 
-        static detail::RawPath makePath(
+        static void makePath(
             const std::filesystem::path& file,
+            detail::RawPath output,
             const char* operation) {
 
             const std::wstring value =
@@ -356,6 +363,12 @@ namespace creo {
                     ": empty path");
             }
 
+            if (value.find(L'\0') != std::wstring::npos) {
+                throw std::invalid_argument(
+                    std::string(operation) +
+                    ": path contains an embedded null character");
+            }
+
             if (value.size() >=
                 static_cast<std::size_t>(
                     PRO_PATH_SIZE)) {
@@ -364,15 +377,12 @@ namespace creo {
                     ": path exceeds PRO_PATH_SIZE");
             }
 
-            detail::RawPath result{};
-
             std::copy(
                 value.begin(),
                 value.end(),
-                result);
+                output);
 
-            result[value.size()] = L'\0';
-            return result;
+            output[value.size()] = L'\0';
         }
 
         static bool isPdfExtension(
