@@ -14,6 +14,7 @@
 #include <ProObjects.h>
 #include <ProModelitem.h>
 #include <ProIntfimport.h>
+#include <ProIntf3Dexport.h>
 #include <ProSelection.h>
 #include <ProView.h>
 #include <ProParameter.h>
@@ -70,6 +71,7 @@ namespace creo::detail {
         ::ProAnnotationAttachmentAssociativity;
     using RawIntfImportType = ::ProIntfImportType;
     using RawImportRepType = ::ProImportRepType;
+    using RawIntf3DExportType = ::ProIntf3DExportType;
     using RawIntfImportLayerFilter = ::ProIntfimportLayerFilter;
     using RawAppData = ::ProAppData;
     using RawSolidDispCompVisitAction = ::ProSolidDispCompVisitAction;
@@ -687,7 +689,16 @@ namespace creo::detail {
     }
 
 
-    inline ProErrorCode intfImportModelWithOptionsMdlnameCreate(
+    inline ProErrorCode intf3DFileWriteWithDefaultProfile(
+        RawSolid solid,
+        RawIntf3DExportType file_type,
+        RawPath output_file) {
+        return ::ProIntf3DFileWriteWithDefaultProfile(
+            solid,
+            file_type,
+            output_file);
+    }
+
         RawPath import_file,
         RawPath profile,
         RawIntfImportType type,
