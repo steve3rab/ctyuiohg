@@ -699,14 +699,15 @@ namespace creo::detail {
             output_file);
     }
 
+    inline ProErrorCode intfImportModelWithOptionsMdlnameCreate(
         RawPath import_file,
         RawPath profile,
         RawIntfImportType type,
         RawMdlType create_type,
         RawImportRepType rep_type,
         RawMdlName new_model_name,
-        ::ProIntfimportLayerFilter filter_func,
-        ::ProAppData application_data,
+        RawIntfImportLayerFilter filter_func,
+        RawAppData application_data,
         RawMdl* created_model) {
         return ::ProIntfimportModelWithOptionsMdlnameCreate(
             import_file,
