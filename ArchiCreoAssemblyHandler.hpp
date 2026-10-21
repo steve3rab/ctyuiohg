@@ -128,8 +128,8 @@ namespace creo {
             }
 
             try {
-                const auto* component =
-                    reinterpret_cast<const detail::RawAsmcomp*>(
+                auto* component =
+                    reinterpret_cast<detail::RawAsmcomp*>(
                         feature);
 
                 const int featureId =
@@ -168,8 +168,7 @@ namespace creo {
 
                 const detail::ProErrorCode modelStatus =
                     detail::asmcompMdlGet(
-                        const_cast<detail::RawAsmcomp*>(
-                            component),
+                        component,
                         &componentModel);
 
                 ArchiCreoAssemblyComponent result;
@@ -221,7 +220,7 @@ namespace creo {
 
                     if (nestedStatus != PRO_TK_NO_ERROR &&
                         nestedStatus != PRO_TK_E_NOT_FOUND) {
-                        CREO_CHECK(nestedStatus);
+                        return nestedStatus;
                     }
                 }
 
