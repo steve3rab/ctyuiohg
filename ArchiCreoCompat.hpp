@@ -71,7 +71,6 @@ namespace creo::detail {
     using RawFeatureType = ::ProFeattype;
     using RawFeatureVisitAction = ::ProFeatureVisitAction;
     using RawFeatureFilterAction = ::ProFeatureFilterAction;
-    using RawAsmcompType = ::ProAsmcompType;
     using RawAnnotationAttachmentAssociativity =
         ::ProAnnotationAttachmentAssociativity;
     using RawIntfImportType = ::ProIntfImportType;
@@ -461,16 +460,6 @@ namespace creo::detail {
             model);
     }
 
-    inline ProErrorCode asmcompTypeGet(
-        RawAsmcomp* component,
-        RawAssembly topAssembly,
-        RawAsmcompType* type) {
-        return ::ProAsmcompTypeGet(
-            component,
-            topAssembly,
-            type);
-    }
-
     inline ProErrorCode asmcomppathInit(
         RawSolid topAssembly,
         int* memberIdTable,
@@ -481,14 +470,6 @@ namespace creo::detail {
             memberIdTable,
             tableSize,
             path);
-    }
-
-    inline ProErrorCode asmcomppathMdlGet(
-        RawAsmcompPath* path,
-        RawMdl* model) {
-        return ::ProAsmcomppathMdlGet(
-            path,
-            model);
     }
 
     inline RawSolid mdlToSolid(RawMdl model) {
