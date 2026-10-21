@@ -7,6 +7,7 @@
 #include <ProAsmcomppath.h>
 #include <ProAnnotation.h>
 #include <ProDrawing.h>
+#include <ProFeature.h>
 #include <ProEcadUtils.h>
 #include <ProAssembly.h>
 #include <ProCore.h>
