@@ -9,7 +9,7 @@
 
 #include "ArchiCreoAssemblyHandler.hpp"
 #include "ArchiCreoModelHandler.hpp"
-#include "ArchiCreoCompat.hpp"
+#include "ArchiCreoErrorHandler.hpp"
 
 #include <exception>
 #include <stdexcept>
@@ -122,6 +122,8 @@ class ArchiCreoAssemblyExample final {
         creo::detail::RawFeature* feature,
         creo::detail::ProErrorCode status,
         creo::detail::RawAppData appData) noexcept {
+
+        (void)feature;
 
         auto* context =
             static_cast<VisitContext*>(appData);
