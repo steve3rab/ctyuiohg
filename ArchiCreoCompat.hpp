@@ -7,6 +7,7 @@
 #include <ProAsmcomppath.h>
 #include <ProAnnotation.h>
 #include <ProDrawing.h>
+#include <ProFeature.h>
 #include <ProEcadUtils.h>
 #include <ProAssembly.h>
 #include <ProCore.h>
@@ -67,6 +68,10 @@ namespace creo::detail {
     using RawView = ::ProView;
     using RawSelection = ::ProSelection;
     using RawAsmcompPath = ::ProAsmcomppath;
+    using RawFeature = ::ProFeature;
+    using RawFeatureType = ::ProFeattype;
+    using RawFeatureVisitAction = ::ProFeatureVisitAction;
+    using RawFeatureFilterAction = ::ProFeatureFilterAction;
     using RawAnnotationAttachmentAssociativity =
         ::ProAnnotationAttachmentAssociativity;
     using RawIntfImportType = ::ProIntfImportType;
@@ -426,6 +431,46 @@ namespace creo::detail {
             visit_action,
             filter_action,
             app_data);
+    }
+
+    inline ProErrorCode solidFeatVisit(
+        RawSolid handle,
+        RawFeatureVisitAction visit_action,
+        RawFeatureFilterAction filter_action,
+        RawAppData app_data) {
+        return ::ProSolidFeatVisit(
+            handle,
+            visit_action,
+            filter_action,
+            app_data);
+    }
+
+    inline ProErrorCode featureTypeGet(
+        RawFeature* feature,
+        RawFeatureType* type) {
+        return ::ProFeatureTypeGet(
+            feature,
+            type);
+    }
+
+    inline ProErrorCode asmcompMdlGet(
+        RawAsmcomp* component,
+        RawMdl* model) {
+        return ::ProAsmcompMdlGet(
+            component,
+            model);
+    }
+
+    inline ProErrorCode asmcomppathInit(
+        RawSolid topAssembly,
+        int* memberIdTable,
+        int tableSize,
+        RawAsmcompPath* path) {
+        return ::ProAsmcomppathInit(
+            topAssembly,
+            memberIdTable,
+            tableSize,
+            path);
     }
 
     inline RawSolid mdlToSolid(RawMdl model) {
